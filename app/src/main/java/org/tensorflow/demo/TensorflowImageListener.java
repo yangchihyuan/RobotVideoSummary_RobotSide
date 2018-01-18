@@ -24,6 +24,7 @@ import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageReader;
@@ -37,6 +38,9 @@ import org.tensorflow.demo.env.ImageUtils;
 import org.tensorflow.demo.env.Logger;
 
 import java.util.List;
+
+import com.asus.robotframework.API.RobotAPI;
+import com.asus.robotframework.API.RobotCallback;
 
 
 /**
@@ -83,6 +87,9 @@ class TensorFlowImageListener implements OnImageAvailableListener {
   private RecognitionScoreView scoreView;
   private BoundingBoxView boundingView;
 
+  private com.asus.robotframework.API.RobotAPI YOLO_robotAPI;
+  private YOLO_RobotCallback robotCallback;
+
   public void initialize(
       final AssetManager assetManager,
       final RecognitionScoreView scoreView,
@@ -97,6 +104,8 @@ class TensorFlowImageListener implements OnImageAvailableListener {
     this.boundingView = boundingView;
     this.handler = handler;
     this.sensorOrientation = sensorOrientation;
+    this.robotCallback = new YOLO_RobotCallback();
+    this.YOLO_robotAPI = new RobotAPI(scoreView.getContext(), robotCallback);
   }
 
   private void drawResizedBitmap(final Bitmap src, final Bitmap dst) {
@@ -137,17 +146,20 @@ class TensorFlowImageListener implements OnImageAvailableListener {
   public void onImageAvailable(final ImageReader reader) {
     Image image = null;
     try {
+      // No mutex needed as this method is not reentrant.
       image = reader.acquireLatestImage();
 
       if (image == null) {
         return;
       }
 
-      // No mutex needed as this method is not reentrant.
-      if (computing || !readyForNextImage) {
+//      if (computing || !readyForNextImage || !robotCallback.motion_complete) {
+      if (computing || !readyForNextImage ) {
         image.close();
         return;
       }
+
+//      robotCallback.motion_complete = false;
       readyForNextImage = true;
       computing = true;
 
@@ -203,18 +215,10 @@ class TensorFlowImageListener implements OnImageAvailableListener {
     rgbFrameBitmap.setPixels(rgbBytes, 0, previewWidth, 0, 0, previewWidth, previewHeight);
     drawResizedBitmap(rgbFrameBitmap, croppedBitmap);
 
-//    Matrix matrix = new Matrix();
-//    matrix.postRotate(270);
-//    croppedBitmap = Bitmap.createBitmap(croppedBitmap, 0, 0, croppedBitmap.getWidth(), croppedBitmap.getHeight(), matrix, true);
-    // For examining the actual TF input.
-    if (SAVE_PREVIEW_BITMAP) {
-      ImageUtils.saveBitmap(croppedBitmap);
-    }
-
-    handler.post(
-        new Runnable() {
-          @Override
-          public void run() {
+//    handler.post(
+//        new Runnable() {
+//          @Override
+//          public void run() {
             final List<Classifier.Recognition> results = tensorflow.recognizeImage(croppedBitmap);
 
             LOGGER.v("%d results", results.size());
@@ -224,9 +228,32 @@ class TensorFlowImageListener implements OnImageAvailableListener {
             scoreView.setResults(results);
             boundingView.setResults(results);
 
+            if( results.get(0).getTitle().equals("person") ){
+              RectF preBoundingBox = results.get(0).getLocation();
+              float center_x = preBoundingBox.left;   //in fact, the meaning of the .left property is the box center
+
+              float x = (float) 0;
+              float y = (float) 0;
+              //Zenbo's horizotal view angle: 62.5053
+              float rotate_rate = 0.9f;
+              float theta = (float) -(center_x - INPUT_SIZE/2 )/INPUT_SIZE * (62.5053f/180) * 3.14f * rotate_rate;
+              LOGGER.d("center_x %f theta %f", center_x, theta);
+              if (SAVE_PREVIEW_BITMAP) {
+                ImageUtils.saveBitmap(croppedBitmap);
+              }
+
+//              if( results.get(0).getConfidence() > 0.3f)
+//                robotCallback.motion_complete = false;
+                YOLO_robotAPI.motion.moveBody(x,y, theta);
+            }
+//            else
+//            {
+//              robotCallback.motion_complete = true;
+//            }
+
             computing = false;
-          }
-        });
+//          }
+//        });
 
     Trace.endSection();
   }
