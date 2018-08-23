@@ -27,9 +27,11 @@ import android.media.ImageReader;
 import android.media.ImageReader.OnImageAvailableListener;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
 import android.os.Trace;
 import android.util.Log;
 
+import org.iox.zenbo.env.ImageUtils;
 import org.iox.zenbo.env.Logger;
 
 import java.io.ByteArrayOutputStream;
@@ -54,13 +56,9 @@ import okhttp3.Response;
 
 class ImageListener implements OnImageAvailableListener {
 
-    //I need this command so that the app can use the yuv2rgb function
     static {
-        System.loadLibrary("tensorflow_demo");
-//        System.loadLibrary("jniLib");
+        System.loadLibrary("native-lib");
     }
-
-    public native String StringFromJNI();
 
     private static final Logger LOGGER = new Logger();
 
@@ -70,128 +68,74 @@ class ImageListener implements OnImageAvailableListener {
     private int[] argbBytes = null;
     private Bitmap argbFrameBitmap = null;
     public boolean bTakePic = false;
-    private MyTimerTask myTimerTask;
-    private SimpleDateFormat format = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss.SSS");
     private Handler inferenceHandler;
+    private MessageView mMessageView;
+    private Handler mActionHandler;
     private InputView inputView;
-    private Data[] DataArray;
+    private DataBuffer dataBuffer;
     private KeyPointView keypointView;
-    private final String TAG = "Listener";
+    private long timestamp_prevous_processed_image = 0;
+    OkHttpClient.Builder httpBuilder;
+    OkHttpClient client;
+    int NumberOfSentFrames = 0;
+    private ActionRunnable mActionRunnable;
+    private int mPort_Number = 8894;
 
-    public void initialize(MyTimerTask theTask, Handler inferenceHandler, InputView inputView, Data[] dataArray, KeyPointView keypointView) {
+    public void initialize(Handler inferenceHandler, MessageView MessageView,
+                           InputView inputView, DataBuffer dataBuffer, KeyPointView keypointView,
+                           Handler ActionHandler, ActionRunnable ActionRunnable) {
         argbFrameBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Config.ARGB_8888);
         argbBytes = new int[previewWidth * previewHeight];
-        myTimerTask = theTask;      //I need to yaw and pitch degrees
         this.inferenceHandler = inferenceHandler;
         this.inputView = inputView;
-        this.DataArray = dataArray;
+        this.dataBuffer = dataBuffer;
         this.keypointView = keypointView;
-    }
+        mMessageView = MessageView;
+        mActionHandler = ActionHandler;
+        mActionRunnable = ActionRunnable;
 
-    //5/15/2018 Chih-Yuan: The java function is too slow.
-    private void getRGBIntFromPlanes(Image.Plane[] planes) {
-        ByteBuffer yPlane = planes[0].getBuffer();
-        ByteBuffer uPlane = planes[1].getBuffer();
-        ByteBuffer vPlane = planes[2].getBuffer();
-
-        int bufferIndex = 0;
-        final int total = yPlane.capacity();
-        final int uvCapacity = uPlane.capacity();
-        final int width = planes[0].getRowStride();
-
-        int yPos = 0;
-        for (int i = 0; i < previewHeight; i++) {
-            int uvPos = (i >> 1) * width;
-
-            for (int j = 0; j < width; j++) {
-                if (uvPos >= uvCapacity-1)
-                    break;
-                if (yPos >= total)
-                    break;
-
-                final int y1 = yPlane.get(yPos++) & 0xff;
-
-            /*
-              The ordering of the u (Cb) and v (Cr) bytes inside the planes is a
-              bit strange. The _first_ byte of the u-plane and the _second_ byte
-              of the v-plane build the u/v pair and belong to the first two pixels
-              (y-bytes), thus usual YUV 420 behavior. What the Android devs did
-              here (IMHO): just copy the interleaved NV21 U/V data to two planes
-              but keep the offset of the interleaving.
-             */
-                final int u = (uPlane.get(uvPos) & 0xff) - 128;
-//                final int v = (vPlane.get(uvPos+1) & 0xff) - 128;
-                final int v = (vPlane.get(uvPos) & 0xff) - 128;
-                if ((j & 1) == 1) {
-                    uvPos += 2;
-                }
-
-                // This is the integer variant to convert YCbCr to RGB, NTSC values.
-                // formulae found at
-                // https://software.intel.com/en-us/android/articles/trusted-tools-in-the-new-android-world-optimization-techniques-from-intel-sse-intrinsics-to
-                // and on StackOverflow etc.
-                final int y1192 = 1192 * y1;
-                int r = (y1192 + 1634 * v);
-                int g = (y1192 - 833 * v - 400 * u);
-                int b = (y1192 + 2066 * u);
-
-                r = (r < 0) ? 0 : ((r > 262143) ? 262143 : r);
-                g = (g < 0) ? 0 : ((g > 262143) ? 262143 : g);
-                b = (b < 0) ? 0 : ((b > 262143) ? 262143 : b);
-
-                argbBytes[bufferIndex++] = (0xff000000 | (r << 6) & 0xff0000) |
-                        ((g >> 2) & 0xff00) |
-                        ((b >> 10) & 0xff);
-            }
-        }
+        httpBuilder = new OkHttpClient.Builder();
+        client = httpBuilder
+                .connectTimeout(1, TimeUnit.SECONDS)
+                .writeTimeout(1, TimeUnit.SECONDS)
+                .build();
     }
 
     @Override
     public void onImageAvailable(final ImageReader reader) {
 
         final Image image = reader.acquireLatestImage();
-        final long timestamp_image = System.currentTimeMillis();
-        final int yawDegree = myTimerTask.yawDegree;
-        final int pitchDegree = myTimerTask.pitchDegree;
-        //save the time sample and keypoints cooridinates.
-        for (int i = DataArray.length-1; i > 0; i--) {
-            DataArray[i].timestamp_OnImageAvailable = DataArray[i - 1].timestamp_OnImageAvailable;
-            DataArray[i].timestamp_ReceivedFromServer = DataArray[i - 1].timestamp_ReceivedFromServer;
-            DataArray[i].yawDegree = DataArray[i - 1].yawDegree;
-            DataArray[i].pitchDegree = DataArray[i - 1].pitchDegree;
-            DataArray[i].ServerReturns = DataArray[i - 1].ServerReturns;
-            DataArray[i].bNew = DataArray[i - 1].bNew;
-        }
-        DataArray[0].timestamp_OnImageAvailable = timestamp_image;
-        DataArray[0].yawDegree = yawDegree;
-        DataArray[0].pitchDegree = pitchDegree;
-        DataArray[0].timestamp_ReceivedFromServer = -1;
-        DataArray[0].ServerReturns = "";
-        DataArray[0].bNew = true;
-        final long timestamp = System.currentTimeMillis();
-        Log.i(TAG, "onImageAvailable() is called " + Long.toString(timestamp));
-
 
         if (image == null)
             return; //such a case happens.
 
+        boolean b_test_speed = true;
+
+        final long timestamp_image = System.currentTimeMillis();
+
+        if( b_test_speed == false) {
+            if (timestamp_image - timestamp_prevous_processed_image > 181)
+                timestamp_prevous_processed_image = timestamp_image;
+            else {
+                image.close();
+                return;
+            }
+        }
+
         final Plane[] planes = image.getPlanes();
 
-/*        yuvBytes = new byte[planes.length][];
+        yuvBytes = new byte[planes.length][];
         for (int i = 0; i < planes.length; ++i) {
             yuvBytes[i] = new byte[planes[i].getBuffer().capacity()];
             planes[i].getBuffer().get(yuvBytes[i]);
         }
-        //y: 307200, u: 153599, v: 153599
-*/
-
 
         try {
             final int yRowStride = planes[0].getRowStride();
             final int uvRowStride = planes[1].getRowStride();
             final int uvPixelStride = planes[1].getPixelStride();
 
-            org.tensorflow.demo.env.ImageUtils.convertYUV420ToARGB8888(
+            ImageUtils.convertYUV420ToARGB8888(
                     yuvBytes[0],
                     yuvBytes[1],
                     yuvBytes[2],
@@ -203,10 +147,6 @@ class ImageListener implements OnImageAvailableListener {
                     uvPixelStride,
                     false);
 
-
-              //5/15/2018 Chih-Yuan: The java function is too slow.
-//            getRGBIntFromPlanes( planes );
-
             image.close();
         } catch (final Exception e) {
             if (image != null) {
@@ -217,26 +157,21 @@ class ImageListener implements OnImageAvailableListener {
             return;
         }
         argbFrameBitmap.setPixels(argbBytes, 0, previewWidth, 0, 0, previewWidth, previewHeight);
-        //send every frame to the server
+        inputView.setBitmap(argbFrameBitmap);
+        inputView.postInvalidate();
+
         final boolean post = inferenceHandler.post(
                 new Runnable() {
                     @Override
                     public void run() {
-                        String Openpose_results = "";
-                        long timestamp = timestamp_image;
                         try {
-                            String UPLOAD_URL = "http://140.112.30.188:8894";
+                            String ServerName = "Pepper";
+                            String UPLOAD_URL = "http://140.112.30.188:" + Integer.toString(mPort_Number);
+                            if( ServerName.equals("Pepper"))
+                                UPLOAD_URL = "http://140.112.30.185:" + Integer.toString(mPort_Number);
+                            else if(ServerName.equals("Sakura"))
+                                UPLOAD_URL = "http://140.112.30.188:" + Integer.toString(mPort_Number);
 
-                            String username = "test_user_123";
-                            String datetime = "2016-12-09 10:00:00";
-                            final OkHttpClient.Builder httpBuilder = new OkHttpClient.Builder();
-                            OkHttpClient client = httpBuilder
-                                    .connectTimeout(1, TimeUnit.SECONDS)
-                                    .writeTimeout(1, TimeUnit.SECONDS)
-                                    .build();
-
-                            inputView.setBitmap(argbFrameBitmap);
-                            inputView.postInvalidate();
                             ByteArrayOutputStream os = new ByteArrayOutputStream();
                             argbFrameBitmap.compress(Bitmap.CompressFormat.JPEG, 50, os);
 
@@ -246,7 +181,7 @@ class ImageListener implements OnImageAvailableListener {
                             long array_length = array_JPEG.length;
                             RequestBody requestBody = new MultipartBody.Builder()
                                     .setType(MultipartBody.FORM)      //should we use form? According to the okhttp3 API, there is a MIXED type.
-                                    .addFormDataPart("application/octet-stream", Long.toString(array_length), RequestBody.create(MediaType.parse("application/octet-stream"), array_JPEG))
+                                    .addFormDataPart(Long.toString(timestamp_image) + "_" + Integer.toString(mActionRunnable.pitchDegree), Long.toString(array_length), RequestBody.create(MediaType.parse("application/octet-stream"), array_JPEG))
                                     .build();
 
 // Create a POST request to send the data to UPLOAD_URL
@@ -259,51 +194,37 @@ class ImageListener implements OnImageAvailableListener {
                             Response response = null;
 
                             try {
+                                NumberOfSentFrames++;
+//                                Log.d("ImageListener NumberOfSentFrames", Integer.toString(NumberOfSentFrames));
                                 response = client.newCall(request).execute();
                             } catch (IOException e) {
                                 e.printStackTrace();
+                                mMessageView.setString("Server timeout");
+                                //setMessageViewText(4);
                             }
 
 // Check the response to see if the upload succeeded
                             if (response == null || !response.isSuccessful()) {
                                 Log.i("response == null", "response == null.");
                             } else {
-                                Openpose_results = response.body().string();  //Why do I get an exception here?
-                                String[] lines = Openpose_results.split(System.getProperty("line.separator"));
-                                if (lines.length > 1) {
-                                    String[] number_lines = Arrays.copyOfRange(lines, 1, 19);
-                                    float[][] fMatrix = new float[18][3];
-                                    int i = 0, j;
-                                    for (String line : number_lines) {
-                                        j = 0;
-                                        String[] value_strings = line.split(" ");
-                                        for (String value_string : value_strings) {
-                                            fMatrix[i][j] = Float.parseFloat(value_string);
-                                            j++;
-                                        }
-                                        i++;
-                                    }
-                                    keypointView.setResults(fMatrix);
-                                }
+                                if (dataBuffer.IsDataFrozen() == false)     //for debugging
+                                    dataBuffer.AddNewFrame(response.body().string());
+                                mActionHandler.post(mActionRunnable);
+                                response.close();       //to prevent an error message java.net.ConnectException: failed to connect to /140.112.30.188 (port 8894) after 1000ms: connect failed: EMFILE (Too many open files)
+                                keypointView.setResults(dataBuffer.getLatestfMatrix());
+
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
                         } finally {
                             //connection.disconnect();
                         }
-                        //save the time sample and keypoint coordinates.
-                        for( int data_index = 0 ; data_index < DataArray.length ; data_index++ ) {
-                            if( DataArray[data_index].timestamp_OnImageAvailable == timestamp) {
-                                DataArray[data_index].ServerReturns = Openpose_results;
-                                DataArray[data_index].timestamp_ReceivedFromServer = System.currentTimeMillis();
-                                break;
-                            }
-                        }
                     }//end of run
-                });
+                }
+        );
 
 //        SaveImage.save(argbFrameBitmap, "_onImageAvailable");
-
+/*
         if (bTakePic) {
             Date currentTime = Calendar.getInstance().getTime();
             String path = Environment.getExternalStorageDirectory().toString();
@@ -328,6 +249,7 @@ class ImageListener implements OnImageAvailableListener {
                 return;
             }
         }
+*/
         Trace.endSection();
     }
 }
