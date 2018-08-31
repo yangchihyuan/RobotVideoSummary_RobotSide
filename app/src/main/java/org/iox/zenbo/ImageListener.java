@@ -165,12 +165,14 @@ class ImageListener implements OnImageAvailableListener {
                     @Override
                     public void run() {
                         try {
-                            String ServerName = "Pepper";
-                            String UPLOAD_URL = "http://140.112.30.188:" + Integer.toString(mPort_Number);
+                            String ServerName = "Sakura";
+                            String UPLOAD_URL;
                             if( ServerName.equals("Pepper"))
                                 UPLOAD_URL = "http://140.112.30.185:" + Integer.toString(mPort_Number);
                             else if(ServerName.equals("Sakura"))
                                 UPLOAD_URL = "http://140.112.30.188:" + Integer.toString(mPort_Number);
+                            else
+                                throw new java.lang.Error("Server not assigned.");
 
                             ByteArrayOutputStream os = new ByteArrayOutputStream();
                             argbFrameBitmap.compress(Bitmap.CompressFormat.JPEG, 50, os);
@@ -211,7 +213,10 @@ class ImageListener implements OnImageAvailableListener {
                                     dataBuffer.AddNewFrame(response.body().string());
                                 mActionHandler.post(mActionRunnable);
                                 response.close();       //to prevent an error message java.net.ConnectException: failed to connect to /140.112.30.188 (port 8894) after 1000ms: connect failed: EMFILE (Too many open files)
-                                keypointView.setResults(dataBuffer.getLatestfMatrix());
+//                                keypointView.setResults(dataBuffer.getLatestfMatrix());
+                                keypointView.setResults(dataBuffer.getLatestfMatrix(),
+                                        dataBuffer.getLatestyMatrix());
+
 
                             }
                         } catch (Exception e) {

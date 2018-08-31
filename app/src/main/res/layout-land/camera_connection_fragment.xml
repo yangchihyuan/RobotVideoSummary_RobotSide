@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+ Copyright 2014 The Android Open Source Project
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffffff">
+
+    <org.iox.zenbo.AutoFitTextureView
+        android:id="@+id/texture"
+        android:layout_width="320dp"
+        android:layout_height="240dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true" />
+
+    <org.iox.zenbo.KeyPointView
+        android:id="@+id/keypoint"
+        android:layout_width="640dp"
+        android:layout_height="480dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignTop="@+id/inputview" />
+
+    <org.iox.zenbo.InputView
+        android:id="@+id/inputview"
+        android:layout_width="640dp"
+        android:layout_height="480dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true" />
+
+    <Button
+        android:id="@+id/button_test"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginEnd="33dp"
+        android:layout_marginTop="34dp"
+        android:text="Test" />
+
+    <Button
+        android:id="@+id/button_30"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignTop="@+id/button_test"
+        android:layout_marginEnd="150dp"
+        android:text="30" />
+
+    <Button
+        android:id="@+id/button_takepic"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignStart="@+id/button_30"
+        android:layout_marginTop="96dp"
+        android:textAllCaps="false"
+        android:text="Take Pic" />
+
+    <Button
+        android:id="@+id/button_freezedata"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@+id/button_test"
+        android:layout_alignTop="@+id/button_takepic"
+        android:text="Freeze Data"
+        android:textAllCaps="false" />
+
+    <Button
+        android:id="@+id/button_dontmove"
+        android:layout_width="149dp"
+        android:layout_height="105dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignStart="@+id/button_test"
+        android:layout_marginStart="-44dp"
+        android:layout_marginTop="155dp"
+        android:text="Don't Move"
+        android:textAllCaps="false" />
+
+    <org.iox.zenbo.MessageView
+        android:id="@+id/MessageView_Detection"
+        android:layout_width="658dp"
+        android:layout_height="47dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginEnd="292dp"
+        android:layout_marginTop="16dp"
+        android:singleLine="false" />
+
+    <org.iox.zenbo.MessageView
+        android:id="@+id/MessageView_Timestamp"
+        android:layout_width="658dp"
+        android:layout_height="190dp"
+        android:layout_alignStart="@+id/MessageView_Detection"
+        android:layout_below="@+id/button_takepic"
+        android:layout_marginTop="-75dp"
+        android:singleLine="false" />
+</RelativeLayout>

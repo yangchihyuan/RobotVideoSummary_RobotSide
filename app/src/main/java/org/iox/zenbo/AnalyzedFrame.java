@@ -1,6 +1,12 @@
 package org.iox.zenbo;
 
+import android.util.Xml;
+
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+
+//import com.bodycoord.Bodycoord;
 
 public class AnalyzedFrame {
     long timestamp_OnImageAvailable;
@@ -8,10 +14,11 @@ public class AnalyzedFrame {
     int pitchDegree;
     boolean bNew = false;
     float[][] fMatrix;
+    float[] yMatrix;
     boolean bFoundPerson = false;
     boolean bIgnorePerson = false;
     boolean bAvailable = false;
-    String[] actions;
+    String[] actions = {"",""};     //8/23/2018 Chih-Yuan: I need to modify this statement later
 
     public AnalyzedFrame()
     {
@@ -30,9 +37,76 @@ public class AnalyzedFrame {
         return index_max;
     }
 
+    public class parsed_data {
+        long timestamp_OnImageAvailable;
+        int pitchDegree;
+        int openpose_cnt;
+        int yolo_cnt;
+        float[][][] openpose_coord;
+        float[][] yolo_coord;
+        boolean bPerson = false;
+    }
+
     public void ParseServerReturn(String ServerReturns)
     {
-        String[] lines = ServerReturns.split(System.getProperty("line.separator"));
+        String[] protobuf_result = ServerReturns.split(System.getProperty("line.separator"));
+
+        parsed_data frame_analysis = new parsed_data();
+        List<float[][]> openpose_coordinate = new ArrayList<float[][]>();
+        List<float[]> yolo_coordinate = new ArrayList<float[]>();
+
+        for(String pr : protobuf_result){
+            if(pr.contains("key")) {
+                String[] key_split = pr.substring(6, pr.length() - 1).split("_");
+                frame_analysis.timestamp_OnImageAvailable = Long.parseLong(key_split[0]);
+                frame_analysis.pitchDegree = Integer.parseInt(key_split[1]);
+            }
+            else if(pr.contains("openpose_cnt")) {
+                frame_analysis.openpose_cnt = Integer.parseInt(pr.replace("openpose_cnt: ", ""));
+            }
+            else if(pr.contains("yolo_cnt")) {
+                frame_analysis.yolo_cnt = Integer.parseInt(pr.replace("yolo_cnt: ", ""));
+            }
+            else if(pr.contains("openpose_coord")) {
+                String[] coord_str = pr.substring(17, pr.length() - 1).split(" \\\\n");
+                float[][] coord_split = new float[18][3];
+                for(int j = 0; j < 18; j++) {
+                    String[] joint_coord_str = coord_str[j].split(" ");
+                    for(int k = 0; k < 3; k++) {
+                        coord_split[j][k] = Float.parseFloat(joint_coord_str[k]);
+                    }
+                }
+                openpose_coordinate.add(coord_split);
+            }
+            else if(pr.contains("yolo_coord")) {
+                String[] coord_str = pr.substring(13, pr.length() - 3).split(", ");
+                float[] coord_split = new float[4];
+                for(int j = 0; j < 4; j++)
+                    coord_split[j] = Float.parseFloat(coord_str[j]);
+                yolo_coordinate.add(coord_split);
+            }
+            else if(pr.contains("charades_webcam")) {
+                actions = pr.substring(18, pr.length() - 1).split(";");
+            }
+        }
+        frame_analysis.bPerson = (frame_analysis.yolo_cnt > 0) && (frame_analysis.openpose_cnt > 0);
+
+        bFoundPerson = frame_analysis.bPerson;
+        timestamp_OnImageAvailable = frame_analysis.timestamp_OnImageAvailable;
+        pitchDegree = frame_analysis.pitchDegree;
+        if(frame_analysis.openpose_cnt > 0)
+            fMatrix = openpose_coordinate.get(0);
+        else
+            fMatrix = new float[18][3];
+        if(frame_analysis.yolo_cnt > 0)
+            yMatrix = yolo_coordinate.get(0);
+        else
+            yMatrix = new float[4];
+
+        /*
+        String[] lines = {"0", "120_134"};
+        // Parse timestamp and pitch degree from 'key'
+
         String timestamp_and_pitchdegree = lines[lines.length-2];
         String[] timestamp_and_pitchdegree_splited = timestamp_and_pitchdegree.split("_");
         timestamp_OnImageAvailable = Long.parseLong(timestamp_and_pitchdegree_splited[0]);
@@ -118,6 +192,6 @@ public class AnalyzedFrame {
                 }
             }
         }
-
+        */
     }
 }

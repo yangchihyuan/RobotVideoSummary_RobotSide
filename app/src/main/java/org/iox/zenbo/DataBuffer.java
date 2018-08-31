@@ -75,6 +75,10 @@ public class DataBuffer {
         ActionArray[action_buffer_index] = action_mode;
     }
 
+    public float[] getLatestyMatrix() {
+        return AnalyzedFrameArray[frame_buffer_index].yMatrix;
+    }
+
     public long getLatestTimeStamp_OnImageAvailable() {
         return AnalyzedFrameArray[frame_buffer_index].timestamp_OnImageAvailable;
     }
