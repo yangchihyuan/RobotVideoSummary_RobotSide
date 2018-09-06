@@ -128,7 +128,7 @@ public class ActionRunnable implements Runnable {
             int detection_mode = 0;
             //detection_mode 1: no person is found
             //detection_mode 2: neglect the found person because the probability is low
-            //detection_mode 3: found a person, but it maybe a false positive
+            //detection_mode 3: found a person, but it is a false positive
             //detection_mode 4: found a person in a long distance
             //detection_mode 5: found a person in an extremely short distance
             //detection_mode 6: found a person in a short distance
@@ -143,13 +143,41 @@ public class ActionRunnable implements Runnable {
 
             //robot_status 1: active
             //robot_status 2: don't move to save energy
+
+            detection_mode = 0; //initialize
             if (LatestFrame.bFoundPerson == false) {
                 detection_mode = 1;
             } else if (LatestFrame.bIgnorePerson) {
                 detection_mode = 2;
-            } else if (dataBuffer.bConsecutiveNoPattern(2)) {
-                detection_mode = 3;
-            } else {
+            }
+            else {
+                float[][] fMatrix = LatestFrame.fMatrix;
+                float[] yMatrix = LatestFrame.yMatrix;      //format:
+
+                float c_w = 640;
+                float c_h = 480;
+                //convert the yolo output to pixel coorecidate
+                float top_x = (yMatrix[0] - yMatrix[2]/2) * c_w;
+                float bot_x = (yMatrix[0] + yMatrix[2]/2) * c_w;
+                float top_y = (yMatrix[1] + yMatrix[3]/2) * c_h;
+                float bot_y = (yMatrix[1] - yMatrix[3]/2) * c_h;
+
+                boolean bNoseInYoloBoundingBox = false;
+                if( fMatrix[0][2] > 0 )       //there is a nose keypoint
+                {
+                    float nose_x = fMatrix[0][0];
+                    float nose_y = fMatrix[0][1];
+                    if (nose_x > top_x && nose_x < bot_x && nose_y > top_y && nose_y < bot_y)
+                        bNoseInYoloBoundingBox = true;
+                }
+                else
+                {
+                    detection_mode = 3;     //false postive
+                }
+            }
+
+            if(detection_mode == 0)
+            {
                 float[][] fMatrix = LatestFrame.fMatrix;
                 float chest_x = fMatrix[1][0];
                 float chest_y = fMatrix[1][1];

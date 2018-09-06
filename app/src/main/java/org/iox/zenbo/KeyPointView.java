@@ -20,40 +20,38 @@ import java.util.List;
 public class KeyPointView extends View {
     private float[][] o_results;
     private float[] y_results;
-    private final Paint fgPaint, bgPaint, textPaint, trPaint, skPaint, yoPaint;
+    private final Paint PaintKeyPoint, PaintKeyPoint_FirstPerson, PaintSkeleton, Paint_YoloBoundingBox, PaintSkeleton_FirstPerson;
+    private Paint PaintKeyPoint_used, skPaint_used;
     private Bitmap OutputBitmap = null;
+    private AnalyzedFrame analyzedFrame;
 
     public KeyPointView(final Context context, final AttributeSet set) {
         super(context, set);
 
-        fgPaint = new Paint();
-        fgPaint.setColor(0xff00ff00);
-        fgPaint.setStyle(Paint.Style.STROKE);
-        fgPaint.setStrokeWidth(4);
+        PaintKeyPoint = new Paint();
+        PaintKeyPoint.setColor(0xff0000ff);    //Blue
+        PaintKeyPoint.setStyle(Paint.Style.STROKE);
+        PaintKeyPoint.setStrokeWidth(4);
 
-        bgPaint = new Paint();
-        bgPaint.setARGB(0, 0, 0, 0);
-        bgPaint.setAlpha(0);
-        bgPaint.setStyle(Paint.Style.STROKE);
+        PaintKeyPoint_FirstPerson = new Paint();
+        PaintKeyPoint_FirstPerson.setColor(0xff00ff00);  //Green
+        PaintKeyPoint_FirstPerson.setStyle(Paint.Style.STROKE);
+        PaintKeyPoint_FirstPerson.setStrokeWidth(4);
 
-        trPaint = new Paint();
-        trPaint.setColor(0xff00ff00);
-        trPaint.setStyle(Paint.Style.FILL);
+        PaintSkeleton = new Paint();
+        PaintSkeleton.setColor(0xff7700ff);
+        PaintSkeleton.setStyle(Paint.Style.STROKE);
+        PaintSkeleton.setStrokeWidth(2);
 
-        textPaint = new Paint();
-        textPaint.setColor(Color.BLACK);
-        textPaint.setStyle(Paint.Style.STROKE);
-        textPaint.setTextSize(50);  //set text size
+        PaintSkeleton_FirstPerson = new Paint();
+        PaintSkeleton_FirstPerson.setColor(0xff77ff00);
+        PaintSkeleton_FirstPerson.setStyle(Paint.Style.STROKE);
+        PaintSkeleton_FirstPerson.setStrokeWidth(2);
 
-        skPaint = new Paint();
-        skPaint.setColor(0xff77ff00);
-        skPaint.setStyle(Paint.Style.STROKE);
-        skPaint.setStrokeWidth(2);
-
-        yoPaint = new Paint();
-        yoPaint.setColor(0x77770000);
-        yoPaint.setStyle(Paint.Style.STROKE);
-        yoPaint.setStrokeWidth(4);
+        Paint_YoloBoundingBox = new Paint();
+        Paint_YoloBoundingBox.setColor(0x77770000);
+        Paint_YoloBoundingBox.setStyle(Paint.Style.STROKE);
+        Paint_YoloBoundingBox.setStrokeWidth(4);
     }
 
     public void setResults(final Bitmap NewBitmap, final float[][] results) {
@@ -68,11 +66,29 @@ public class KeyPointView extends View {
         postInvalidate();       //This function will lead to onDraw
     }
 
+    public void setResults( AnalyzedFrame frame)
+    {
+        analyzedFrame = frame;
+        postInvalidate();       //This function will lead to onDraw
+    }
 
     @Override
     public void onDraw(final Canvas canvas) {
-        if (o_results != null) {
-//            canvas.drawBitmap(OutputBitmap, 0, 0, null);
+        if( analyzedFrame == null)
+            return;
+
+        for( int idx_openpose = 0 ; idx_openpose < analyzedFrame.openpose_cnt ;idx_openpose++)
+        {
+            if( idx_openpose == 0 ) {
+                PaintKeyPoint_used = PaintKeyPoint_FirstPerson;
+                skPaint_used = PaintSkeleton_FirstPerson;
+            }
+            else {
+                PaintKeyPoint_used = PaintKeyPoint;
+                skPaint_used = PaintSkeleton;
+            }
+
+            float [][] o_results = analyzedFrame.openpose_coordinate.get(idx_openpose);
             for (int i=0; i<18; ++i) {
                 if( o_results[i][2] > 0 )
                 {
@@ -84,7 +100,7 @@ public class KeyPointView extends View {
                     float bounding_y2 = y+2;
                     RectF boundingBox = new RectF(bounding_x, bounding_y, bounding_x2, bounding_y2);
 
-                    canvas.drawRect(boundingBox, fgPaint);
+                    canvas.drawRect(boundingBox, PaintKeyPoint_used);
                 }
             }
 
@@ -95,11 +111,13 @@ public class KeyPointView extends View {
             for(int j = 0; j < 17; j++)
                 if(o_results[src[j]][2] > 0 && o_results[dst[j]][2] > 0)
                     canvas.drawLine(o_results[src[j]][0], o_results[src[j]][1],
-                                    o_results[dst[j]][0], o_results[dst[j]][1], skPaint);
+                                    o_results[dst[j]][0], o_results[dst[j]][1], skPaint_used);
 
         }
 
-        if(y_results != null) {
+        for( int idx_yolo = 0 ; idx_yolo < analyzedFrame.yolo_cnt ;idx_yolo++)
+        {
+            float[] y_results = analyzedFrame.yolo_coordinate.get(idx_yolo);
             //Draw bounding boxes for yolo
             float c_w = canvas.getWidth(), c_h = canvas.getHeight();
 
@@ -108,11 +126,11 @@ public class KeyPointView extends View {
             float top_y = (y_results[1] + y_results[3]/2) * c_h;
             float bot_y = (y_results[1] - y_results[3]/2) * c_h;
 
-            canvas.drawRect(top_x, bot_y, bot_x, top_y, yoPaint);
-            canvas.drawCircle(top_x, top_y, 5, yoPaint);
-            canvas.drawCircle(bot_x, bot_y, 5, yoPaint);
-            canvas.drawCircle(top_x, bot_y, 5, yoPaint);
-            canvas.drawCircle(bot_x, top_y, 5, yoPaint);
+            canvas.drawRect(top_x, bot_y, bot_x, top_y, Paint_YoloBoundingBox);
+            canvas.drawCircle(top_x, top_y, 5, Paint_YoloBoundingBox);
+            canvas.drawCircle(bot_x, bot_y, 5, Paint_YoloBoundingBox);
+            canvas.drawCircle(top_x, bot_y, 5, Paint_YoloBoundingBox);
+            canvas.drawCircle(bot_x, top_y, 5, Paint_YoloBoundingBox);
 
         }
     }

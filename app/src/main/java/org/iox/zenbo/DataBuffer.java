@@ -52,8 +52,11 @@ public class DataBuffer {
         int new_index = frame_buffer_index + 1;
         if (new_index == AnalyzedFrameArray.length)
             new_index = 0;
-        AnalyzedFrameArray[new_index].ParseServerReturn(ServerResponse);
         AnalyzedFrameArray[new_index].timestamp_ReceivedFromServer = System.currentTimeMillis();
+        AnalyzedFrameArray[new_index].ParseServerReturn(ServerResponse);
+        boolean bshow_process_time = true;
+        if( bshow_process_time)
+            Log.d("Process time", String.valueOf( AnalyzedFrameArray[new_index].timestamp_ReceivedFromServer - AnalyzedFrameArray[new_index].timestamp_OnImageAvailable));
         AnalyzedFrameArray[new_index].bNew = true;
         if (AnalyzedFrameArray[new_index].bFoundPerson)
             m_bPersonLocationReset = true;

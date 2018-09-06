@@ -109,12 +109,13 @@ class ImageListener implements OnImageAvailableListener {
         if (image == null)
             return; //such a case happens.
 
-        boolean b_test_speed = true;
+        boolean b_test_speed = false;
 
         final long timestamp_image = System.currentTimeMillis();
 
+        long frame_send_postpone = 400; //in millisecond
         if( b_test_speed == false) {
-            if (timestamp_image - timestamp_prevous_processed_image > 181)
+            if (timestamp_image - timestamp_prevous_processed_image > frame_send_postpone)
                 timestamp_prevous_processed_image = timestamp_image;
             else {
                 image.close();
@@ -170,7 +171,7 @@ class ImageListener implements OnImageAvailableListener {
                             if( ServerName.equals("Pepper"))
                                 UPLOAD_URL = "http://140.112.30.185:" + Integer.toString(mPort_Number);
                             else if(ServerName.equals("Sakura"))
-                                UPLOAD_URL = "http://140.112.30.188:" + Integer.toString(mPort_Number);
+                                UPLOAD_URL = "http://Sakura.csie.ntu.edu.tw:" + Integer.toString(mPort_Number);
                             else
                                 throw new java.lang.Error("Server not assigned.");
 
@@ -213,11 +214,7 @@ class ImageListener implements OnImageAvailableListener {
                                     dataBuffer.AddNewFrame(response.body().string());
                                 mActionHandler.post(mActionRunnable);
                                 response.close();       //to prevent an error message java.net.ConnectException: failed to connect to /140.112.30.188 (port 8894) after 1000ms: connect failed: EMFILE (Too many open files)
-//                                keypointView.setResults(dataBuffer.getLatestfMatrix());
-                                keypointView.setResults(dataBuffer.getLatestfMatrix(),
-                                        dataBuffer.getLatestyMatrix());
-
-
+                                keypointView.setResults(dataBuffer.getLatestFrame());
                             }
                         } catch (Exception e) {
                             e.printStackTrace();

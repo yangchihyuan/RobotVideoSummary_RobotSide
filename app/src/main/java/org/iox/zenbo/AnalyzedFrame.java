@@ -1,18 +1,17 @@
 package org.iox.zenbo;
 
-import android.util.Xml;
-
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
-//import com.bodycoord.Bodycoord;
 
 public class AnalyzedFrame {
     long timestamp_OnImageAvailable;
     long timestamp_ReceivedFromServer;
     int pitchDegree;
     boolean bNew = false;
+    int openpose_cnt;
+    int yolo_cnt;
+    List<float[][]> openpose_coordinate;
+    List<float[]> yolo_coordinate;
     float[][] fMatrix;
     float[] yMatrix;
     boolean bFoundPerson = false;
@@ -23,6 +22,8 @@ public class AnalyzedFrame {
     public AnalyzedFrame()
     {
         fMatrix = new float[18][3];
+        openpose_coordinate = new ArrayList<float[][]>();
+        yolo_coordinate = new ArrayList<float[]>();
     }
 
     private int find_max_value_in_numeric_array_with_java ( float[] numbers) {
@@ -37,6 +38,7 @@ public class AnalyzedFrame {
         return index_max;
     }
 
+/*
     public class parsed_data {
         long timestamp_OnImageAvailable;
         int pitchDegree;
@@ -46,26 +48,27 @@ public class AnalyzedFrame {
         float[][] yolo_coord;
         boolean bPerson = false;
     }
+*/
 
     public void ParseServerReturn(String ServerReturns)
     {
-        String[] protobuf_result = ServerReturns.split(System.getProperty("line.separator"));
+        //clear old data
+        openpose_coordinate.clear();
+        yolo_coordinate.clear();
 
-        parsed_data frame_analysis = new parsed_data();
-        List<float[][]> openpose_coordinate = new ArrayList<float[][]>();
-        List<float[]> yolo_coordinate = new ArrayList<float[]>();
+        String[] protobuf_result = ServerReturns.split(System.getProperty("line.separator"));
 
         for(String pr : protobuf_result){
             if(pr.contains("key")) {
                 String[] key_split = pr.substring(6, pr.length() - 1).split("_");
-                frame_analysis.timestamp_OnImageAvailable = Long.parseLong(key_split[0]);
-                frame_analysis.pitchDegree = Integer.parseInt(key_split[1]);
+                timestamp_OnImageAvailable = Long.parseLong(key_split[0]);
+                pitchDegree = Integer.parseInt(key_split[1]);
             }
             else if(pr.contains("openpose_cnt")) {
-                frame_analysis.openpose_cnt = Integer.parseInt(pr.replace("openpose_cnt: ", ""));
+                openpose_cnt = Integer.parseInt(pr.replace("openpose_cnt: ", ""));
             }
             else if(pr.contains("yolo_cnt")) {
-                frame_analysis.yolo_cnt = Integer.parseInt(pr.replace("yolo_cnt: ", ""));
+                yolo_cnt = Integer.parseInt(pr.replace("yolo_cnt: ", ""));
             }
             else if(pr.contains("openpose_coord")) {
                 String[] coord_str = pr.substring(17, pr.length() - 1).split(" \\\\n");
@@ -89,19 +92,37 @@ public class AnalyzedFrame {
                 actions = pr.substring(18, pr.length() - 1).split(";");
             }
         }
-        frame_analysis.bPerson = (frame_analysis.yolo_cnt > 0) && (frame_analysis.openpose_cnt > 0);
+        //TODO: Is this criterion proper? Sometimes yolo_cnt = 0 but openpose_cnt > 0.
+        bFoundPerson = (yolo_cnt > 0) && (openpose_cnt > 0);
 
-        bFoundPerson = frame_analysis.bPerson;
-        timestamp_OnImageAvailable = frame_analysis.timestamp_OnImageAvailable;
-        pitchDegree = frame_analysis.pitchDegree;
-        if(frame_analysis.openpose_cnt > 0)
+        //Openpose sorts the order of skeletons by size. Thus it is ok to use the first returned skeleton.
+        if(openpose_cnt > 0)
             fMatrix = openpose_coordinate.get(0);
         else
             fMatrix = new float[18][3];
-        if(frame_analysis.yolo_cnt > 0)
+
+        //TODO: Is the order of yolo returns sorted by size?
+        if(yolo_cnt > 0)
             yMatrix = yolo_coordinate.get(0);
         else
             yMatrix = new float[4];
+
+
+        //Check the probability, prevent the false positives.
+        //If all probability values are less than the threshold, ignore the found person.
+        float threshold = 0.4f;
+        boolean bExceed = false;
+        for(int i=0; i<18; i++)
+        {
+            if( fMatrix[i][2] > threshold) {
+                bExceed = true;
+                break;
+            }
+        }
+        if( bExceed)
+            bIgnorePerson = false;
+        else
+            bIgnorePerson =true;
 
         /*
         String[] lines = {"0", "120_134"};
