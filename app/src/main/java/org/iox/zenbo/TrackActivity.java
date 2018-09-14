@@ -103,6 +103,8 @@ public class TrackActivity extends Activity {
         int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;       //Why do I still see the navigation bar.
         decorView.setSystemUiVisibility(uiOptions);
+
+        //9/13/2018 Chih-Yuan: create a thread to establish a socket connection
     }
 
     @Override

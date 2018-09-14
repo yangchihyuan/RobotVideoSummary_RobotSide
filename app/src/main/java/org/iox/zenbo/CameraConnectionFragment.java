@@ -60,16 +60,23 @@ import com.asus.robotframework.API.SpeakConfig;
 
 import org.iox.zenbo.env.Logger;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.TimerTask;
+import java.util.Vector;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+
+import javax.xml.transform.Result;
 
 
 //public class CameraConnectionFragment extends Fragment implements View.OnClickListener {
@@ -117,6 +124,38 @@ public class CameraConnectionFragment extends Fragment {
             Manifest.permission.RECORD_AUDIO
     };
     DialogCallback dsCallback;
+
+    java.util.Timer timer;
+
+
+    TimerTask task = new TimerTask() {
+        public void run() {
+            String ServerName = "Pepper";
+            String machine_URL = ServerName + ".csie.ntu.edu.tw";
+            final int mPort_Number_Receive_Result = 8896;
+
+            String result = "";
+            BufferedReader inFromServer;
+            try {
+                Socket socket_result = new Socket(machine_URL, mPort_Number_Receive_Result);
+                inFromServer = new BufferedReader(new InputStreamReader(socket_result.getInputStream()));
+                String line;
+                while ((line = inFromServer.readLine()) != null) {
+                    result += (line + "\n");
+                }
+//                Log.d("Received from Server: ", result);
+
+                socket_result.close();
+                if (!result.isEmpty()) {
+                    m_DataBuffer.AddNewFrame(result);
+                    mActionHandler.post(mActionRunnable);
+                    keypointView.setResults(m_DataBuffer.getLatestFrame());
+                }
+            } catch (Exception e) {
+
+            }
+        }
+    };
 
 
     /**
@@ -226,7 +265,7 @@ public class CameraConnectionFragment extends Fragment {
         speakConfig.languageId(SpeakConfig.LANGUAGE_ID_EN_US);
         ZenboAPI.robot.jumpToPlan("5823CA7CDACF43EEAF4417D783FB1321", "zenboTest.plan.showface");
 
-        if( dsCallback == null)
+        if (dsCallback == null)
             dsCallback = new DialogCallback();
 
         dsCallback.setRobotAPI(ZenboAPI);
@@ -256,10 +295,10 @@ public class CameraConnectionFragment extends Fragment {
                 String Caption = button_takepic.getText().toString();
                 if (Caption.equals("Take Pic")) {
                     button_takepic.setText("Stop");
-                    mPreviewListener.bTakePic = true;
+//                    mPreviewListener.bTakePic = true;
                 } else {
                     button_takepic.setText("Take Pic");
-                    mPreviewListener.bTakePic = false;
+//                    mPreviewListener.bTakePic = false;
                 }
             }
         });
@@ -295,6 +334,11 @@ public class CameraConnectionFragment extends Fragment {
         mActionRunnable.setMessageView(mMessageView_Detection, mMessageView_Timestamp);
         m_DataBuffer = new DataBuffer(100);
         mActionRunnable.setDataBuffer(m_DataBuffer);
+
+        timer = new java.util.Timer(true);
+        long delay = 1000;        //33 ms
+        long period = 33;
+        timer.schedule(task, delay, period);
     }
 
     @Override
@@ -322,20 +366,18 @@ public class CameraConnectionFragment extends Fragment {
 
     @Override
     public void onPause() {
-        try{
-            if( mIsRecordingVideo) {
+        try {
+            if (mIsRecordingVideo) {
                 mMediaRecorder.stop();      //Sometimes I get an error message here, why? Maybe I cannot call the stop() if it is not recording.
                 mIsRecordingVideo = false;
             }
-        }
-        catch( Exception e)
-        {
+        } catch (Exception e) {
 
         }
         closeCamera();
         stopBackgroundThread();
         super.onPause();
-        Log.d("CameraConnectionFragment","onPause() is called.");
+        Log.d("CameraConnectionFragment", "onPause() is called.");
     }
 
     /**
@@ -407,7 +449,7 @@ public class CameraConnectionFragment extends Fragment {
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        long max_filesize_bytes = 4*1024*1024*1024;  //4Gib
+        long max_filesize_bytes = 4 * 1024 * 1024 * 1024;  //4Gib
         mMediaRecorder.setMaxFileSize(max_filesize_bytes);      //Does it work?
         mVideoAbsolutePath = getVideoFilePath(getActivity());
         mMediaRecorder.setOutputFile(mVideoAbsolutePath);
@@ -419,8 +461,7 @@ public class CameraConnectionFragment extends Fragment {
         mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
             @Override
             public void onInfo(MediaRecorder mr, int what, int extra) {
-                if( what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED)
-                {
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED) {
                     closeCamera();
 //                    openCamera(640,480);
                     openCamera();
@@ -442,7 +483,7 @@ public class CameraConnectionFragment extends Fragment {
         inferenceThread.start();
         inferenceHandler = new Handler(inferenceThread.getLooper());
 
-        mActionThread = new HandlerThread( "ActionThread");
+        mActionThread = new HandlerThread("ActionThread");
         mActionThread.start();
         mActionHandler = new Handler(mActionThread.getLooper());
     }
@@ -476,8 +517,8 @@ public class CameraConnectionFragment extends Fragment {
         Date currentTime = Calendar.getInstance().getTime();
         Log.d("getVideoFilePath", mDateFormat.format(currentTime));
         //I have to mkdir the Captures folder.
-        File file=new File(path + "/Captures");
-        if(!file.exists()){
+        File file = new File(path + "/Captures");
+        if (!file.exists()) {
             file.mkdirs();
         }
         return path + "/Captures/" + mDateFormat.format(currentTime) + ".mp4";
@@ -507,7 +548,7 @@ public class CameraConnectionFragment extends Fragment {
             mPreviewBuilder.addTarget(recorderSurface);
 
             // Set up Surface for the ImageReader
-            mPreviewReader = ImageReader.newInstance( mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
+            mPreviewReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
             mPreviewReader.setOnImageAvailableListener(mPreviewListener, mBackgroundHandler);
             mPreviewBuilder.addTarget(mPreviewReader.getSurface());
             surfaces.add(mPreviewReader.getSurface());
@@ -544,8 +585,8 @@ public class CameraConnectionFragment extends Fragment {
         } catch (CameraAccessException | IOException e) {
             e.printStackTrace();
         }
-        mPreviewListener.initialize(inferenceHandler, mMessageView_Detection, inputView,
-                m_DataBuffer, keypointView, mActionHandler, mActionRunnable);
+        mPreviewListener.initialize(inferenceHandler, inputView,
+                mActionRunnable);
     }
 
     private void closePreviewSession() {
@@ -591,7 +632,7 @@ public class CameraConnectionFragment extends Fragment {
             mPreviewBuilder.addTarget(previewSurface);
 
             // Create the reader for the preview frames.
-            mPreviewReader = ImageReader.newInstance( mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
+            mPreviewReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
             mPreviewReader.setOnImageAvailableListener(mPreviewListener, mBackgroundHandler);
             mPreviewBuilder.addTarget(mPreviewReader.getSurface());
 
@@ -616,7 +657,6 @@ public class CameraConnectionFragment extends Fragment {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        mPreviewListener.initialize(inferenceHandler, mMessageView_Detection, inputView,
-                m_DataBuffer, keypointView, mActionHandler,mActionRunnable);
+        mPreviewListener.initialize(inferenceHandler, inputView, mActionRunnable);
     }
 }

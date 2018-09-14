@@ -10,6 +10,10 @@ import com.asus.robotframework.API.MotionControl;
 import com.asus.robotframework.API.RobotCmdState;
 import com.asus.robotframework.API.RobotFace;
 
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+
 import static java.lang.Math.max;
 
 public class ActionRunnable implements Runnable {
@@ -31,6 +35,10 @@ public class ActionRunnable implements Runnable {
     private String mMessage_Timestamp = "";
     private String newline = System.getProperty("line.separator");
     private String[] detection_mode_description = new String[7];
+    private boolean mbFirstTime = true;
+
+    private Socket socket_client;
+    private final int mPort_Number = 8896;
 
     public ActionRunnable() {
         bWaitingForRobotFinishesMovement = false;
@@ -64,6 +72,16 @@ public class ActionRunnable implements Runnable {
 
     @Override
     public void run() {
+        if(mbFirstTime) {
+            try {
+                socket_client = new Socket("pepper.csie.ntu.edu.tw", mPort_Number);
+                mbFirstTime = false;
+            } catch (Exception e) {
+                System.out.println("Socket does not work.");
+                System.out.println("IOException :" + e.toString());
+            }
+        }
+
         boolean bContinue = true;
         final long timestamp_decision = System.currentTimeMillis();
         //2018/5/18 Chih-Yuan: Because the callback is unstable, I need to manually reset the flag
