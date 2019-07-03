@@ -96,12 +96,13 @@ public class TrackActivity extends Activity {
 //            mRobotAPI.robot.registerListenCallback(dsCallback);
         mRobotAPI.robot.setExpression(RobotFace.HIDEFACE);
         mRobotAPI.robot.setPressOnHeadAction(false);
-
+        mRobotAPI.robot.setVoiceTrigger(false);     //disable the voice trigger
 //        mRobotAPI.robot.jumpToPlan(DOMAIN, "ShowFace");
 
         View decorView = getWindow().getDecorView();
-        int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;       //Why do I still see the navigation bar.
+//        int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+//                | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;       //Why do I still see the navigation bar.
+        int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
         decorView.setSystemUiVisibility(uiOptions);
 
         //9/13/2018 Chih-Yuan: create a thread to establish a socket connection
@@ -111,6 +112,7 @@ public class TrackActivity extends Activity {
     protected void onPause() {
         super.onPause();
         mRobotAPI.robot.unregisterListenCallback();
+        mRobotAPI.robot.setExpression(RobotFace.DEFAULT);
     }
 
     private boolean hasPermission() {
@@ -139,5 +141,11 @@ public class TrackActivity extends Activity {
                 .beginTransaction()
                 .replace(R.id.container, CameraConnectionFragment.newInstance())
                 .commit();
+    }
+
+    @Override
+    protected void onStop()
+    {
+        super.onStop();
     }
 }

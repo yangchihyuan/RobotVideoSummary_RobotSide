@@ -26,6 +26,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -52,9 +53,11 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.Toast;
 
-import com.asus.robotframework.API.MotionControl;
 import com.asus.robotframework.API.RobotAPI;
 import com.asus.robotframework.API.SpeakConfig;
 
@@ -64,6 +67,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -72,11 +77,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimerTask;
-import java.util.Vector;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-
-import javax.xml.transform.Result;
 
 
 //public class CameraConnectionFragment extends Fragment implements View.OnClickListener {
@@ -84,29 +86,29 @@ public class CameraConnectionFragment extends Fragment {
     private static final Logger LOGGER = new Logger();
 
     private KeyPointView keypointView;
-
     private InputView inputView;
-
     private ActionRunnable mActionRunnable = new ActionRunnable();
-    private Button button_test;
-    private Button button30;
-    private Button button_takepic;
-    private Button button_freezedata;
-    private Button button_dontmove;
+    private CheckBox checkBox_keep_alert;
+    private CheckBox checkBox_enable_connection;
+    private CheckBox checkBox_show_face;
+    private CheckBox checkBox_dont_move;
+    private CheckBox checkBox_dont_rotate;
+    private Button button_close;
     private MessageView mMessageView_Detection;
     private MessageView mMessageView_Timestamp;
+    private EditText editText_Server;
+    private EditText editText_Port;
     private com.asus.robotframework.API.RobotAPI ZenboAPI;
     private com.asus.robotframework.API.SpeakConfig speakConfig;
     private DataBuffer m_DataBuffer;
     private MediaRecorder mMediaRecorder;
     private String mVideoAbsolutePath;
-    private static final String TAG = "Camera2VideoFragment";
     private Size mPreviewSize = new Size(640, 480);
     private CameraDevice mCameraDevice;
-    private HandlerThread backgroundThread;
-    private Handler mBackgroundHandler;
-    private HandlerThread inferenceThread;
-    private Handler inferenceHandler;
+    private HandlerThread threadImageListener;
+    private Handler handlerImageListener;
+    private HandlerThread threadSendToServer;
+    private Handler handlerSendToServer;
     private HandlerThread mActionThread;
     private Handler mActionHandler;
     private ImageReader mPreviewReader;     //used to get onImageAvailable, not used in Camera2Video project
@@ -123,37 +125,40 @@ public class CameraConnectionFragment extends Fragment {
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO
     };
-    DialogCallback dsCallback;
+    Socket socket_result;
+    Socket socket;
 
-    java.util.Timer timer;
+    java.util.Timer timer_get_analyzed_results;
+    java.util.Timer timer_check_disconnection;      //I need a timer to check whether the connection is lost.
+    InputStreamReader mInputStreamReader;
+    BufferedReader mBufferedReader_inFromServer;
 
-
-    TimerTask task = new TimerTask() {
+    TimerTask task_get_analyzed_results = new TimerTask() {
         public void run() {
-            String ServerName = "Pepper";
-            String machine_URL = ServerName + ".csie.ntu.edu.tw";
-            final int mPort_Number_Receive_Result = 8896;
-
+            Log.d("CameraConnection", "into task_get_analyzed_results");
+            final long timestamp_start = System.currentTimeMillis();
             String result = "";
-            BufferedReader inFromServer;
             try {
-                Socket socket_result = new Socket(machine_URL, mPort_Number_Receive_Result);
-                inFromServer = new BufferedReader(new InputStreamReader(socket_result.getInputStream()));
-                String line;
-                while ((line = inFromServer.readLine()) != null) {
-                    result += (line + "\n");
+                if( mBufferedReader_inFromServer != null) {
+                    String line;
+                    while (true)
+                    {
+                        line = mBufferedReader_inFromServer.readLine();
+                        //if the server is down, the line will be null, and there will be an exception.
+                        if( line.equals("EndToken"))
+                            break;
+                        result += (line + "\n");
+                    }
                 }
-//                Log.d("Received from Server: ", result);
-
-                socket_result.close();
                 if (!result.isEmpty()) {
                     m_DataBuffer.AddNewFrame(result);
                     mActionHandler.post(mActionRunnable);
                     keypointView.setResults(m_DataBuffer.getLatestFrame());
                 }
             } catch (Exception e) {
-
+                Log.d("Exception", e.getMessage());
             }
+            final long timestamp_end = System.currentTimeMillis();
         }
     };
 
@@ -167,14 +172,12 @@ public class CameraConnectionFragment extends Fragment {
                 @Override
                 public void onSurfaceTextureAvailable(
                         final SurfaceTexture texture, final int width, final int height) {
-//                    openCamera(width, height);
                     openCamera();
                 }
 
                 @Override
                 public void onSurfaceTextureSizeChanged(
                         final SurfaceTexture texture, final int width, final int height) {
-//                    configureTransform(width, height);
                 }
 
                 @Override
@@ -198,10 +201,12 @@ public class CameraConnectionFragment extends Fragment {
                 public void onOpened(final CameraDevice cameraDevice) {
                     // This method is called when the camera is opened.  We start camera preview here.
                     mCameraDevice = cameraDevice;
-//                startPreview();
-                    startRecordingVideo();      //The startRecordingVideo is called in a callback function. Is it fine?
+                    boolean bRecordVideo = false;
+                    if( bRecordVideo == false )
+                        startPreview();
+                    else
+                        startRecordingVideo();      //The startRecordingVideo is called in a callback function. Is it fine?
                     cameraOpenCloseLock.release();
-//                    createCameraPreviewSession();
                 }
 
                 @Override
@@ -247,98 +252,159 @@ public class CameraConnectionFragment extends Fragment {
         return v;
     }
 
+
     @Override
     public void onViewCreated(final View view, final Bundle savedInstanceState) {
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
-        keypointView = (KeyPointView) view.findViewById(R.id.keypoint);
         inputView = (InputView) view.findViewById(R.id.inputview);
-        button_test = (Button) view.findViewById(R.id.button_test);
-        button30 = (Button) view.findViewById(R.id.button_30);
-        button_takepic = (Button) view.findViewById(R.id.button_takepic);
-        button_freezedata = (Button) view.findViewById(R.id.button_freezedata);
-        button_dontmove = (Button) view.findViewById(R.id.button_dontmove);
+        keypointView = (KeyPointView) view.findViewById(R.id.keypoint);
+        editText_Port = (EditText) view.findViewById(R.id.editText_Port);
+        editText_Server = (EditText) view.findViewById(R.id.editText_Server);
+        checkBox_keep_alert = (CheckBox) view.findViewById(R.id.checkBox_keepalert);
+        checkBox_enable_connection = (CheckBox) view.findViewById(R.id.checkBox_connect);
+        checkBox_show_face = (CheckBox) view.findViewById(R.id.checkBox_ShowFace);
+        checkBox_dont_move = (CheckBox) view.findViewById(R.id.checkBox_DontMove);
+        checkBox_dont_rotate = (CheckBox) view.findViewById(R.id.checkBox_DontRotate);
         mMessageView_Detection = (MessageView) view.findViewById(R.id.MessageView_Detection);
         mMessageView_Timestamp = (MessageView) view.findViewById(R.id.MessageView_Timestamp);
         ZenboAPI = new RobotAPI(view.getContext());
-        speakConfig = new SpeakConfig();
-        speakConfig.domain("5823CA7CDACF43EEAF4417D783FB1321");
-        speakConfig.languageId(SpeakConfig.LANGUAGE_ID_EN_US);
-        ZenboAPI.robot.jumpToPlan("5823CA7CDACF43EEAF4417D783FB1321", "zenboTest.plan.showface");
+        button_close = (Button) view.findViewById(R.id.button_close);
+//        speakConfig = new SpeakConfig();
+//        speakConfig.languageId(SpeakConfig.LANGUAGE_ID_EN_US);   //Does this matter?
 
-        if (dsCallback == null)
-            dsCallback = new DialogCallback();
-
-        dsCallback.setRobotAPI(ZenboAPI);
-        dsCallback.setActionRunnable(mActionRunnable);
-
-        if (dsCallback != null)
-            ZenboAPI.robot.registerListenCallback(dsCallback);
-
-        button_test.setOnClickListener(new Button.OnClickListener() {
+        checkBox_show_face.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
-            public void onClick(View v) {
-
-                ZenboAPI.robot.speakAndListen("Would you like me to show my face?", speakConfig);
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mActionRunnable.mShowRobotFace = isChecked;
             }
         });
 
-        button30.setOnClickListener(new Button.OnClickListener() {
+        checkBox_dont_move.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
-            public void onClick(View v) {
-                ZenboAPI.motion.moveHead(0, 30, MotionControl.SpeedLevel.Head.L3);
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mActionRunnable.bDontMove = isChecked;
             }
         });
 
-        button_takepic.setOnClickListener(new Button.OnClickListener() {
+        checkBox_dont_rotate.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
-            public void onClick(View v) {
-                String Caption = button_takepic.getText().toString();
-                if (Caption.equals("Take Pic")) {
-                    button_takepic.setText("Stop");
-//                    mPreviewListener.bTakePic = true;
-                } else {
-                    button_takepic.setText("Take Pic");
-//                    mPreviewListener.bTakePic = false;
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mActionRunnable.bDontRotateBody = isChecked;
+            }
+        });
+
+        button_close.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ZenboAPI.release();
+                    mActionRunnable.ZenboAPI.release();
+                    getActivity().finish();
+                    getActivity().moveTaskToBack(true);
                 }
             }
-        });
+        );
 
-        button_freezedata.setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String Caption = button_freezedata.getText().toString();
-                if (Caption.equals("Freeze Data")) {
-                    button_freezedata.setText("UnFreeze");
-                    m_DataBuffer.FreezeData();
-                } else {
-                    button_freezedata.setText("Freeze Data");
-                    m_DataBuffer.UnfreezeData();
+        TimerTask task_check_connection = new TimerTask() {
+            public void run() {
+                if (checkBox_enable_connection.isChecked()) {
+                    if( socket == null )
+                    {
+                        try {
+                            String ServerURL = editText_Server.getText().toString();
+                            int PortNumber = Integer.parseInt(editText_Port.getText().toString());
+                            socket = new Socket(ServerURL, PortNumber);
+                            socket_result = new Socket(ServerURL, PortNumber + 1);
+                            if (socket_result.isConnected()) {
+                                mInputStreamReader = new InputStreamReader(socket_result.getInputStream());
+                                mBufferedReader_inFromServer = new BufferedReader(mInputStreamReader);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        if( socket != null ) {
+                            if (socket.isConnected() && socket_result.isConnected()) {
+                                showToast("Server Connected ");
+                                mPreviewListener.set_socket(socket);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (mPreviewListener.mbSendSuccessfully == false) {
+                            try {
+                                if( socket != null) {
+                                    socket.close();
+                                    if (socket.isClosed())
+                                        socket = null;
+                                }
+
+                                if( socket_result != null) {
+                                    socket_result.close();
+                                    if (socket_result.isClosed())
+                                        socket_result = null;
+                                }
+
+                                String ServerURL = editText_Server.getText().toString();
+                                int PortNumber = Integer.parseInt(editText_Port.getText().toString());
+                                socket = new Socket(ServerURL, PortNumber);
+                                socket_result = new Socket(ServerURL, PortNumber + 1);
+                                if (socket_result.isConnected()) {
+                                    mInputStreamReader = new InputStreamReader(socket_result.getInputStream());
+                                    mBufferedReader_inFromServer = new BufferedReader(mInputStreamReader);
+                                }
+
+                                if (socket.isConnected() && socket_result.isConnected()) {
+                                    showToast("Server Connected ");
+                                    mPreviewListener.set_socket(socket);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    try {
+                        if (socket != null) {
+                            socket.close();
+                            if (socket.isClosed())
+                                socket = null;
+                            showToast("Server Disonnected ");
+                        }
+
+                        if (socket_result != null) {
+                            socket_result.close();
+                            if (socket_result.isClosed())
+                                socket_result = null;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-        });
+        };
 
-        button_dontmove.setOnClickListener(new Button.OnClickListener() {
+        checkBox_keep_alert.setOnCheckedChangeListener( new CheckBox.OnCheckedChangeListener() {
             @Override
-            public void onClick(View v) {
-                String Caption = button_dontmove.getText().toString();
-                if (Caption.equals("Don't Move")) {
-                    button_dontmove.setText("Enable Move");
-                    mActionRunnable.bDontMove = true;
-                } else {
-                    button_dontmove.setText("Don't Move");
-                    mActionRunnable.bDontMove = false;
-                }
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+                mActionRunnable.bKeepAlert = isChecked;
             }
+
         });
 
         mActionRunnable.setMessageView(mMessageView_Detection, mMessageView_Timestamp);
         m_DataBuffer = new DataBuffer(100);
         mActionRunnable.setDataBuffer(m_DataBuffer);
 
-        timer = new java.util.Timer(true);
-        long delay = 1000;        //33 ms
-        long period = 33;
-        timer.schedule(task, delay, period);
+        timer_get_analyzed_results = new java.util.Timer(true);
+        long delay = 1000;
+        long period = 33;        //33 ms
+        timer_get_analyzed_results.schedule(task_get_analyzed_results, delay, period);
+
+        timer_check_disconnection = new java.util.Timer(true);
+        timer_check_disconnection.schedule(task_check_connection, 1000, 1000);
     }
 
     @Override
@@ -350,18 +416,19 @@ public class CameraConnectionFragment extends Fragment {
     public void onResume() {
         super.onResume();
 
-        startBackgroundThread();
+        startthreadImageListener();
+//        button_run.requestFocus();
 
         // When the screen is turned off and turned back on, the SurfaceTexture is already
         // available, and "onSurfaceTextureAvailable" will not be called. In that case, we can open
         // a camera and start preview from here (otherwise, we wait until the surface is ready in
         // the SurfaceTextureListener).
         if (mTextureView.isAvailable()) {
-//            openCamera(mTextureView.getWidth(), mTextureView.getHeight());
             openCamera();
         } else {
             mTextureView.setSurfaceTextureListener(surfaceTextureListener);
         }
+
     }
 
     @Override
@@ -375,9 +442,8 @@ public class CameraConnectionFragment extends Fragment {
 
         }
         closeCamera();
-        stopBackgroundThread();
+        stopthreadImageListener();
         super.onPause();
-        Log.d("CameraConnectionFragment", "onPause() is called.");
     }
 
     /**
@@ -390,7 +456,7 @@ public class CameraConnectionFragment extends Fragment {
         final Activity activity = getActivity();
         final CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
         try {
-            if (!cameraOpenCloseLock.tryAcquire(5000, TimeUnit.MILLISECONDS)) {
+            if (!cameraOpenCloseLock.tryAcquire(30000, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
             String cameraId = manager.getCameraIdList()[0];
@@ -404,7 +470,7 @@ public class CameraConnectionFragment extends Fragment {
 
             mMediaRecorder = new MediaRecorder();
             // 4/25/2018 Chih-Yuan: The permission check is done in the TrackActivity.java
-            manager.openCamera(cameraId, mStateCallback, mBackgroundHandler);
+            manager.openCamera(cameraId, mStateCallback, handlerImageListener);
         } catch (final CameraAccessException e) {
             LOGGER.e(e, "Exception!");
         } catch (final InterruptedException e) {
@@ -463,7 +529,6 @@ public class CameraConnectionFragment extends Fragment {
             public void onInfo(MediaRecorder mr, int what, int extra) {
                 if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED) {
                     closeCamera();
-//                    openCamera(640,480);
                     openCamera();
                 }
             }
@@ -474,14 +539,14 @@ public class CameraConnectionFragment extends Fragment {
     /**
      * Starts a background thread and its {@link Handler}.
      */
-    private void startBackgroundThread() {
-        backgroundThread = new HandlerThread("ImageListener");
-        backgroundThread.start();
-        mBackgroundHandler = new Handler(backgroundThread.getLooper());
+    private void startthreadImageListener() {
+        threadImageListener = new HandlerThread("ImageListener");
+        threadImageListener.start();
+        handlerImageListener = new Handler(threadImageListener.getLooper());
 
-        inferenceThread = new HandlerThread("InferenceThread");
-        inferenceThread.start();
-        inferenceHandler = new Handler(inferenceThread.getLooper());
+        threadSendToServer = new HandlerThread("threadSendToServer");
+        threadSendToServer.start();
+        handlerSendToServer = new Handler(threadSendToServer.getLooper());
 
         mActionThread = new HandlerThread("ActionThread");
         mActionThread.start();
@@ -491,18 +556,18 @@ public class CameraConnectionFragment extends Fragment {
     /**
      * Stops the background thread and its {@link Handler}.
      */
-    private void stopBackgroundThread() {
-        backgroundThread.quitSafely();
-        inferenceThread.quitSafely();
+    private void stopthreadImageListener() {
+        threadImageListener.quitSafely();
+        threadSendToServer.quitSafely();
         mActionThread.quitSafely();
         try {
-            backgroundThread.join();
-            backgroundThread = null;
-            mBackgroundHandler = null;
+            threadImageListener.join();
+            threadImageListener = null;
+            handlerImageListener = null;
 
-            inferenceThread.join();
-            inferenceThread = null;
-            inferenceHandler = null;
+            threadSendToServer.join();
+            threadSendToServer = null;
+            handlerSendToServer = null;
 
             mActionThread.join();
             mActionThread = null;
@@ -549,7 +614,7 @@ public class CameraConnectionFragment extends Fragment {
 
             // Set up Surface for the ImageReader
             mPreviewReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
-            mPreviewReader.setOnImageAvailableListener(mPreviewListener, mBackgroundHandler);
+            mPreviewReader.setOnImageAvailableListener(mPreviewListener, handlerImageListener);
             mPreviewBuilder.addTarget(mPreviewReader.getSurface());
             surfaces.add(mPreviewReader.getSurface());
 
@@ -569,6 +634,7 @@ public class CameraConnectionFragment extends Fragment {
                             mIsRecordingVideo = true;
 
                             // Start recording
+                            //TODO: this statement may cause an exception. Be aware.
                             mMediaRecorder.start();
                         }
                     });
@@ -581,12 +647,11 @@ public class CameraConnectionFragment extends Fragment {
                         Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
                     }
                 }
-            }, mBackgroundHandler);
+            }, handlerImageListener);
         } catch (CameraAccessException | IOException e) {
             e.printStackTrace();
         }
-        mPreviewListener.initialize(inferenceHandler, inputView,
-                mActionRunnable);
+        mPreviewListener.initialize(handlerSendToServer, inputView, mActionRunnable);
     }
 
     private void closePreviewSession() {
@@ -606,12 +671,14 @@ public class CameraConnectionFragment extends Fragment {
         try {
             //CaptureRequest.CONTROL_MODE: Overall mode of 3A
             mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-            mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, mBackgroundHandler);
+            mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, handlerImageListener);
         } catch (CameraAccessException e) {
+            e.printStackTrace();
+        } catch (Exception e)
+        {
             e.printStackTrace();
         }
     }
-
 
     /**
      * Start the camera preview.
@@ -633,7 +700,7 @@ public class CameraConnectionFragment extends Fragment {
 
             // Create the reader for the preview frames.
             mPreviewReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
-            mPreviewReader.setOnImageAvailableListener(mPreviewListener, mBackgroundHandler);
+            mPreviewReader.setOnImageAvailableListener(mPreviewListener, handlerImageListener);
             mPreviewBuilder.addTarget(mPreviewReader.getSurface());
 
             mCameraDevice.createCaptureSession(
@@ -653,10 +720,10 @@ public class CameraConnectionFragment extends Fragment {
                                 Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
                             }
                         }
-                    }, mBackgroundHandler);
+                    }, handlerImageListener);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        mPreviewListener.initialize(inferenceHandler, inputView, mActionRunnable);
+        mPreviewListener.initialize(handlerSendToServer, inputView, mActionRunnable);
     }
 }

@@ -23,6 +23,7 @@ public class DataBuffer {
             return false;
     }
 
+    //constructor
     public DataBuffer(int number) {
         SetSize(number);
     }
@@ -54,7 +55,7 @@ public class DataBuffer {
             new_index = 0;
         AnalyzedFrameArray[new_index].timestamp_ReceivedFromServer = System.currentTimeMillis();
         AnalyzedFrameArray[new_index].ParseServerReturn(ServerResponse);
-        boolean bshow_process_time = true;
+        boolean bshow_process_time = false;
         if( bshow_process_time)
             Log.d("Process time", String.valueOf( AnalyzedFrameArray[new_index].timestamp_ReceivedFromServer - AnalyzedFrameArray[new_index].timestamp_OnImageAvailable));
         AnalyzedFrameArray[new_index].bNew = true;
@@ -78,9 +79,9 @@ public class DataBuffer {
         ActionArray[action_buffer_index] = action_mode;
     }
 
-    public float[] getLatestyMatrix() {
-        return AnalyzedFrameArray[frame_buffer_index].yMatrix;
-    }
+//    public float[] getLatestyMatrix() {
+//        return AnalyzedFrameArray[frame_buffer_index].yMatrix;
+//    }
 
     public long getLatestTimeStamp_OnImageAvailable() {
         return AnalyzedFrameArray[frame_buffer_index].timestamp_OnImageAvailable;
@@ -325,5 +326,10 @@ public class DataBuffer {
         }
 
         return bMatchPattern;
+    }
+
+    //reset the number of turning around to let Zenbo turn around again
+    public void BreakStandbyPattern() {
+        ActionArray[action_buffer_index] = 7;        //alter the pattern
     }
 }

@@ -34,7 +34,7 @@ public class MessageView extends View {
     super(context, set);
       tp.setColor(Color.BLACK);
       tp.setStyle(Style.FILL);
-      tp.setTextSize(24);
+      tp.setTextSize(48);
   }
 
   public void setString(String string) {

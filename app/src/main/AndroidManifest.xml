@@ -28,18 +28,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
-
-
-    <uses-sdk
-        android:minSdkVersion="21"
-        android:targetSdkVersion="23" />
-
     <application android:allowBackup="true"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/MaterialTheme">
-        <meta-data android:name="zenbo_ds_domainuuid" android:value="5823CA7CDACF43EEAF4417D783FB1321"/>
-        <meta-data android:name="zenbo_ds_version_5823CA7CDACF43EEAF4417D783FB1321" android:value="0.0.1" />
         <activity android:name="org.iox.zenbo.TrackActivity"
                   android:screenOrientation="landscape"
                   android:label="@string/app_name">

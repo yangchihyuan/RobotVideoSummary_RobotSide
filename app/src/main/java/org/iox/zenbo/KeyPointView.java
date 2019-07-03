@@ -18,52 +18,52 @@ import java.util.List;
 
 
 public class KeyPointView extends View {
-    private float[][] o_results;
-    private float[] y_results;
-    private final Paint PaintKeyPoint, PaintKeyPoint_FirstPerson, PaintSkeleton, Paint_YoloBoundingBox, PaintSkeleton_FirstPerson;
-    private Paint PaintKeyPoint_used, skPaint_used;
-    private Bitmap OutputBitmap = null;
+    //private final Paint Paint_openpose_other_connection, Paint_openpose_first_landmark, Paint_openpose_other_landmark, Paint_Yolo_person, Paint_Yolo_person_text, Paint_Yolo_tvmonitor, Paint_Yolo_tvmonitor_text, Paint_openpose_first_connection;
+    private final Paint Paint_Tracker_green, Paint_Tracker_red, Paint_openpose_other_connection, Paint_openpose_first_landmark, Paint_openpose_other_landmark, Paint_openpose_first_connection;
     private AnalyzedFrame analyzedFrame;
 
     public KeyPointView(final Context context, final AttributeSet set) {
         super(context, set);
 
-        PaintKeyPoint = new Paint();
-        PaintKeyPoint.setColor(0xff0000ff);    //Blue
-        PaintKeyPoint.setStyle(Paint.Style.STROKE);
-        PaintKeyPoint.setStrokeWidth(4);
+        Paint_openpose_first_landmark = new Paint();
+        Paint_openpose_first_landmark.setColor(0xff00ff00);  //Green
 
-        PaintKeyPoint_FirstPerson = new Paint();
-        PaintKeyPoint_FirstPerson.setColor(0xff00ff00);  //Green
-        PaintKeyPoint_FirstPerson.setStyle(Paint.Style.STROKE);
-        PaintKeyPoint_FirstPerson.setStrokeWidth(4);
+        Paint_openpose_first_connection = new Paint();
+        Paint_openpose_first_connection.setColor(0xff00ff00); //Green
 
-        PaintSkeleton = new Paint();
-        PaintSkeleton.setColor(0xff7700ff);
-        PaintSkeleton.setStyle(Paint.Style.STROKE);
-        PaintSkeleton.setStrokeWidth(2);
+        Paint_openpose_other_landmark = new Paint();
+        Paint_openpose_other_landmark.setColor(0xffff0000);     //Red
 
-        PaintSkeleton_FirstPerson = new Paint();
-        PaintSkeleton_FirstPerson.setColor(0xff77ff00);
-        PaintSkeleton_FirstPerson.setStyle(Paint.Style.STROKE);
-        PaintSkeleton_FirstPerson.setStrokeWidth(2);
+        Paint_openpose_other_connection = new Paint();
+        Paint_openpose_other_connection.setColor(0xffff0000);    //Red
+/*
+        Paint_Yolo_person = new Paint();
+        Paint_Yolo_person.setColor(0xff00ff00);  //Green
+        Paint_Yolo_person.setStyle(Paint.Style.STROKE);
+        Paint_Yolo_person.setStrokeWidth(1);
 
-        Paint_YoloBoundingBox = new Paint();
-        Paint_YoloBoundingBox.setColor(0x77770000);
-        Paint_YoloBoundingBox.setStyle(Paint.Style.STROKE);
-        Paint_YoloBoundingBox.setStrokeWidth(4);
-    }
+        Paint_Yolo_person_text = new Paint();
+        Paint_Yolo_person_text.setColor(0xff00ff00);  //Green
+        Paint_Yolo_person_text.setTextSize(24);
 
-    public void setResults(final Bitmap NewBitmap, final float[][] results) {
-        OutputBitmap = NewBitmap;
-        this.o_results = results;
-        postInvalidate();       //This function will lead to onDraw
-    }
+        Paint_Yolo_tvmonitor = new Paint();
+        Paint_Yolo_tvmonitor.setColor(0x77ff0000);  //Red
+        Paint_Yolo_tvmonitor.setStyle(Paint.Style.STROKE);
+        Paint_Yolo_tvmonitor.setStrokeWidth(1);
 
-    public void setResults(final float[][] o_results, final float[] y_results) {
-        this.o_results = o_results;
-        this.y_results = y_results;
-        postInvalidate();       //This function will lead to onDraw
+        Paint_Yolo_tvmonitor_text = new Paint();
+        Paint_Yolo_tvmonitor_text.setColor(0x77ff0000);  //Red
+        Paint_Yolo_tvmonitor_text.setTextSize(24);
+*/
+        Paint_Tracker_green = new Paint();
+        Paint_Tracker_green.setColor(Color.GREEN);
+        Paint_Tracker_green.setStyle(Paint.Style.STROKE);
+        Paint_Tracker_green.setStrokeWidth(3.0f);
+
+        Paint_Tracker_red = new Paint();
+        Paint_Tracker_red.setColor(Color.RED);
+        Paint_Tracker_red.setStyle(Paint.Style.STROKE);
+        Paint_Tracker_red.setStrokeWidth(3.0f);
     }
 
     public void setResults( AnalyzedFrame frame)
@@ -77,15 +77,17 @@ public class KeyPointView extends View {
         if( analyzedFrame == null)
             return;
 
+        //draw openpose skeleton
         for( int idx_openpose = 0 ; idx_openpose < analyzedFrame.openpose_cnt ;idx_openpose++)
         {
+            Paint Paint_landmark, Paint_connection;
             if( idx_openpose == 0 ) {
-                PaintKeyPoint_used = PaintKeyPoint_FirstPerson;
-                skPaint_used = PaintSkeleton_FirstPerson;
+                Paint_landmark = Paint_openpose_first_landmark;
+                Paint_connection = Paint_openpose_first_connection;
             }
             else {
-                PaintKeyPoint_used = PaintKeyPoint;
-                skPaint_used = PaintSkeleton;
+                Paint_landmark = Paint_openpose_other_connection;
+                Paint_connection = Paint_openpose_other_landmark;
             }
 
             float [][] o_results = analyzedFrame.openpose_coordinate.get(idx_openpose);
@@ -94,13 +96,7 @@ public class KeyPointView extends View {
                 {
                     float x = o_results[i][0];
                     float y = o_results[i][1];
-                    float bounding_x = x -2;
-                    float bounding_x2 = x+2;
-                    float bounding_y = y -2;
-                    float bounding_y2 = y+2;
-                    RectF boundingBox = new RectF(bounding_x, bounding_y, bounding_x2, bounding_y2);
-
-                    canvas.drawRect(boundingBox, PaintKeyPoint_used);
+                    canvas.drawCircle(x, y, 4, Paint_landmark);
                 }
             }
 
@@ -111,27 +107,54 @@ public class KeyPointView extends View {
             for(int j = 0; j < 17; j++)
                 if(o_results[src[j]][2] > 0 && o_results[dst[j]][2] > 0)
                     canvas.drawLine(o_results[src[j]][0], o_results[src[j]][1],
-                                    o_results[dst[j]][0], o_results[dst[j]][1], skPaint_used);
+                                    o_results[dst[j]][0], o_results[dst[j]][1], Paint_connection);
 
         }
 
-        for( int idx_yolo = 0 ; idx_yolo < analyzedFrame.yolo_cnt ;idx_yolo++)
+        //Draw person
+        /*
+        for( int idx_yolo = 0 ; idx_yolo < analyzedFrame.yolo_cnt_person ;idx_yolo++)
         {
-            float[] y_results = analyzedFrame.yolo_coordinate.get(idx_yolo);
+            int[] yolo_results = analyzedFrame.yolo_coordinate_person.get(idx_yolo);
+
+            int left = yolo_results[0];
+            int right = yolo_results[1];
+            int top = yolo_results[2];
+            int bottom = yolo_results[3];
+
+            canvas.drawRect(left, top, right, bottom, Paint_Yolo_person);
+            canvas.drawText("person", left, top, Paint_Yolo_person_text);
+        }
+        */
+        //Draw TV
+        /*
+        Log.d("KeyPointView",Integer.toString(analyzedFrame.yolo_cnt_tvmonitor));
+        for( int idx_yolo = 0 ; idx_yolo < analyzedFrame.yolo_cnt_tvmonitor ;idx_yolo++)
+        {
             //Draw bounding boxes for yolo
-            float c_w = canvas.getWidth(), c_h = canvas.getHeight();
+            int[] yolo_results = analyzedFrame.yolo_coordinate_tvmonitor.get(idx_yolo);
 
-            float top_x = (y_results[0] - y_results[2]/2) * c_w;
-            float bot_x = (y_results[0] + y_results[2]/2) * c_w;
-            float top_y = (y_results[1] + y_results[3]/2) * c_h;
-            float bot_y = (y_results[1] - y_results[3]/2) * c_h;
+            int left = yolo_results[0];
+            int right = yolo_results[1];
+            int top = yolo_results[2];
+            int bottom = yolo_results[3];
 
-            canvas.drawRect(top_x, bot_y, bot_x, top_y, Paint_YoloBoundingBox);
-            canvas.drawCircle(top_x, top_y, 5, Paint_YoloBoundingBox);
-            canvas.drawCircle(bot_x, bot_y, 5, Paint_YoloBoundingBox);
-            canvas.drawCircle(top_x, bot_y, 5, Paint_YoloBoundingBox);
-            canvas.drawCircle(bot_x, top_y, 5, Paint_YoloBoundingBox);
+            canvas.drawRect(left, top, right, bottom, Paint_Yolo_tvmonitor);
+            canvas.drawText("TVmonitor", left, top, Paint_Yolo_tvmonitor_text);
+        }
+        */
 
+        //Draw tracker roi
+        if( analyzedFrame.tracker_roi_x != -1)
+        {
+            int left = analyzedFrame.tracker_roi_x;
+            int right = analyzedFrame.tracker_roi_x + analyzedFrame.tracker_roi_width;
+            int top = analyzedFrame.tracker_roi_y;
+            int bottom = analyzedFrame.tracker_roi_y + analyzedFrame.tracker_roi_height;
+            if( analyzedFrame.roi_rectangle_color == 1)
+                canvas.drawRect(left, top, right, bottom, Paint_Tracker_green);
+            else if( analyzedFrame.roi_rectangle_color == 2)
+                canvas.drawRect(left, top, right, bottom, Paint_Tracker_red);
         }
     }
 }

@@ -1,0 +1,43 @@
+    TimerTask task_check_socket_on = new TimerTask() {
+        public void run() {
+            Log.d("CameraConnectionFragment","Into the timer");
+            //I cannot set a break point on this line. Why?
+            if( socket != null)
+                if( !socket.isConnected() && m_bSocketIsConnected)
+                {
+                    m_bSocketIsConnected = false;
+                    button_run.setText("CONNECT");
+                }
+
+        }
+    };
+
+
+        button_run.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                if( m_bServerConnected == false ) {
+                    //Connect to the server
+//                    m_String_Server = editText_Server.getText().toString();
+//                    m_int_Port = Integer.parseInt(editText_Port.getText().toString());
+                    Thread thread=new Thread(Connection);
+                    thread.start();
+//                    mPort_Number_Receive_Result = m_int_Port + 1;
+                    //mPreviewListener.set_Server_and_Port(m_String_Server, m_int_Port);
+                    //mPreviewListener.allow_socket();
+                    //mAllowSocket = true;
+                    //If there a callback function? How do I know the socket connection is on?
+//                    m_bServerConnected = true;
+                    button_run.setText("DISCONNECT");
+//                }
+//                else //break the connection
+//                {
+//                    m_bServerConnected = false;
+//                    button_run.setText("Run");
+//                }
+            }
+        });
+
+
+        timer_check_socket_on = new java.util.Timer(true);
+        timer_check_socket_on.schedule(task_check_socket_on, 0, 1000);

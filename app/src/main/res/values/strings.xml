@@ -17,4 +17,15 @@
     <string name="description_info">Info</string>
     <string name="request_permission">This sample needs camera permission.</string>
     <string name="camera_error">This device doesn\'t support Camera2 API.</string>
+    <string name="server_url">sakura.csie.ntu.edu.tw</string>
+    <string name="server_port_number">8895</string>
+    <string name="connect">CONNECT</string>
+    <string name="disconnect">DISCONNECT</string>
+    <string name="Server_and_port">Server and port</string>
+    <string name="Keep_Alert">Keep alert</string>
+    <string name="EnableConnection">EnableConnection</string>
+    <string name="showface">Show face</string>
+    <string name="dontmove">Don\'t move</string>
+    <string name="close">Close</string>
+    <string name="dontrorate">Don\'t rotate</string>
 </resources>

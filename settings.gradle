@@ -1,1 +1,1 @@
-include ':app', ':ZenboSDK', ':okhttp-3.10.0'
+include ':app', ':ZenboSDK'
