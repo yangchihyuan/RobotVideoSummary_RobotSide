@@ -4,7 +4,7 @@ This folder contains the source file of an Android app running on a Zenbo robot 
 This program runs on a Zenbo robot. Although this problem can be installed in Android devices, it won't work. 
 
 # Environment #
-- Android Studio 3.4.1
+- Android Studio Jellyfish
 - Zenbo built number MMB29M.TW_Zenbo-13.10.5.122-20190615
 
 # Installation #
