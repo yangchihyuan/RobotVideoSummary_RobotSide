@@ -18,7 +18,7 @@
  *  at the Georgia Institute of Technology School of Interactive Computing
  */
 
-package org.iox.hello;
+package tw.edu.cgu.ai.zenbo;
 
 import android.Manifest;
 import android.app.Activity;

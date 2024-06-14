@@ -18,7 +18,7 @@
  *  at the Georgia Institute of Technology School of Interactive Computing
  */
 
-package org.iox.hello;
+package tw.edu.cgu.ai.zenbo;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -59,7 +59,7 @@ import android.widget.Toast;
 
 import com.asus.robotframework.API.RobotAPI;
 
-import org.iox.hello.env.Logger;
+import tw.edu.cgu.ai.zenbo.env.Logger;
 
 import java.io.BufferedReader;
 import java.io.File;

@@ -6,7 +6,7 @@ android {
     compileSdkVersion 23
 
     defaultConfig {
-        applicationId 'cgu.ai.zenbo'
+        applicationId 'tw.edu.cgu.ai.zenbo'
         minSdk 23
         targetSdkVersion 23
         versionCode 1
@@ -31,7 +31,7 @@ android {
             path "CMakeLists.txt"
         }
     }
-    namespace 'org.iox.zenbo'
+    namespace 'tw.edu.cgu.ai.zenbo'
 }
 
 dependencies {

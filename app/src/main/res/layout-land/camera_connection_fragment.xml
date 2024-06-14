@@ -33,7 +33,7 @@
         android:layout_marginEnd="11dp"
         android:text="@string/dontrorate" />
 
-    <org.iox.hello.AutoFitTextureView
+    <tw.edu.cgu.ai.zenbo.AutoFitTextureView
         android:id="@+id/texture"
         android:layout_width="320dp"
         android:layout_height="240dp"
@@ -43,7 +43,7 @@
         android:layout_marginTop="438dp"
         tools:visibility="invisible" />
 
-    <org.iox.hello.InputView
+    <tw.edu.cgu.ai.zenbo.InputView
         android:id="@+id/inputview"
         android:layout_width="640dp"
         android:layout_height="480dp"
@@ -51,7 +51,7 @@
         android:layout_alignParentBottom="true"
         android:layout_marginStart="0dp" />
 
-    <org.iox.hello.KeyPointView
+    <tw.edu.cgu.ai.zenbo.KeyPointView
         android:id="@+id/keypoint"
         android:layout_width="640dp"
         android:layout_height="480dp"
@@ -71,7 +71,7 @@
         android:layout_marginBottom="0dp"
         android:text="@string/Server_and_port" />
 
-    <org.iox.hello.MessageView
+    <tw.edu.cgu.ai.zenbo.MessageView
         android:id="@+id/MessageView_Detection"
         android:layout_width="628dp"
         android:layout_height="120dp"
@@ -80,7 +80,7 @@
         android:layout_marginTop="300dp"
         android:singleLine="false" />
 
-    <org.iox.hello.MessageView
+    <tw.edu.cgu.ai.zenbo.MessageView
         android:id="@+id/MessageView_Timestamp"
         android:layout_width="626dp"
         android:layout_height="403dp"
