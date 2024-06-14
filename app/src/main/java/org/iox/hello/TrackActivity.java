@@ -18,7 +18,7 @@
  *  at the Georgia Institute of Technology School of Interactive Computing
  */
 
-package org.iox.zenbo;
+package org.iox.hello;
 
 import android.Manifest;
 import android.app.Activity;
@@ -30,10 +30,7 @@ import android.view.WindowManager;
 import android.widget.Toast;
 
 import com.asus.robotframework.API.RobotAPI;
-import com.asus.robotframework.API.RobotCallback;
 import com.asus.robotframework.API.RobotFace;
-
-import org.iox.zenbo.R;
 
 
 public class TrackActivity extends Activity {
@@ -54,6 +51,11 @@ public class TrackActivity extends Activity {
         super.onCreate(savedInstanceState);
 //    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        //Chih-Yuan Yang: setContentView is a function of the Activity class. It can change the page layout
+        //but keeps variables unchanged.
+        //This is the most necessary task in the onCreate() callback function.
+        //I am confused here because my layout/activity_camera.xml is almost empty. Does this statement matter?
+        //The "activity_camera" is the src/main/res/layout/activity_camera.xml, but the content is almost empty.
         setContentView(R.layout.activity_camera);
 
         if (hasPermission()) {

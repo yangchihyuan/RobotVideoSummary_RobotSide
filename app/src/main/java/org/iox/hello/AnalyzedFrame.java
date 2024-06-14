@@ -1,4 +1,4 @@
-package org.iox.zenbo;
+package org.iox.hello;
 
 import java.util.ArrayList;
 import java.util.List;

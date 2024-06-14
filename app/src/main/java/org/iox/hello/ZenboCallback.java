@@ -1,6 +1,4 @@
-package org.iox.zenbo;
-
-import android.util.Log;
+package org.iox.hello;
 
 import com.asus.robotframework.API.RobotCallback;
 import com.asus.robotframework.API.RobotCmdState;

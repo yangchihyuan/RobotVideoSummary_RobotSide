@@ -1,4 +1,4 @@
-package org.iox.zenbo;
+package org.iox.hello;
 
 public class AverageFrame {
     float[][] fMatrix;

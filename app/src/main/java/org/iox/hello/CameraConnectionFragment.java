@@ -18,7 +18,7 @@
  *  at the Georgia Institute of Technology School of Interactive Computing
  */
 
-package org.iox.zenbo;
+package org.iox.hello;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -26,7 +26,6 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -59,16 +58,13 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.asus.robotframework.API.RobotAPI;
-import com.asus.robotframework.API.SpeakConfig;
 
-import org.iox.zenbo.env.Logger;
+import org.iox.hello.env.Logger;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -253,6 +249,7 @@ public class CameraConnectionFragment extends Fragment {
     }
 
 
+    //Chih-Yuan Yang: onViewCreated is a member function of Fragment
     @Override
     public void onViewCreated(final View view, final Bundle savedInstanceState) {
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);

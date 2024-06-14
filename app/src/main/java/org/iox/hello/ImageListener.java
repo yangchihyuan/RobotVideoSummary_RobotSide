@@ -17,7 +17,7 @@ limitations under the License.
  *  at the Georgia Institute of Technology School of Interactive Computing
  */
 
-package org.iox.zenbo;
+package org.iox.hello;
 
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
@@ -29,8 +29,8 @@ import android.os.Handler;
 import android.os.Trace;
 import android.util.Log;
 
-import org.iox.zenbo.env.ImageUtils;
-import org.iox.zenbo.env.Logger;
+import org.iox.hello.env.ImageUtils;
+import org.iox.hello.env.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;

@@ -1,12 +1,8 @@
-package org.iox.zenbo;
-
-import android.drm.DrmStore;
-import android.util.Log;
+package org.iox.hello;
 
 import com.asus.robotframework.API.RobotCallback;
 import com.asus.robotframework.API.RobotUtil;
 import com.asus.robotframework.API.RobotAPI;
-import com.asus.robotframework.API.RobotFace;
 
 public class DialogCallback implements RobotCallback.Listen {
     String TAG = "DialogCallback";

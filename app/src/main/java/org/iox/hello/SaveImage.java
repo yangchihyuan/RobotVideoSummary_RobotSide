@@ -1,4 +1,4 @@
-package org.iox.zenbo;
+package org.iox.hello;
 
 import android.graphics.Bitmap;
 import android.os.Environment;

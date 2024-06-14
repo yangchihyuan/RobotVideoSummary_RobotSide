@@ -1,13 +1,7 @@
-package org.iox.zenbo;
-
-import android.os.Handler;
-import android.os.Message;
-import android.util.Log;
-import android.widget.TextView;
+package org.iox.hello;
 
 import com.asus.robotframework.API.RobotAPI;
 import com.asus.robotframework.API.MotionControl;
-import com.asus.robotframework.API.RobotCmdState;
 import com.asus.robotframework.API.RobotFace;
 
 import java.text.DecimalFormat;

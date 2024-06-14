@@ -1,11 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
+    //Chih-Yuan Yang: I need the compileSdkVersion item for Android 6 SDK. Don't remove it. Don't
+    //follow new gradle version's suggestion.
     compileSdkVersion 23
 
     defaultConfig {
-        applicationId "ntu.iox.zenbo"
-        minSdkVersion 21
+        applicationId 'cgu.ai.zenbo'
+        minSdk 23
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
@@ -29,6 +31,7 @@ android {
             path "CMakeLists.txt"
         }
     }
+    namespace 'org.iox.zenbo'
 }
 
 dependencies {

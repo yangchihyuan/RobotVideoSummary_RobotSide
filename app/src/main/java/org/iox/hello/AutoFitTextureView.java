@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.iox.zenbo;
+package org.iox.hello;
 
 import android.content.Context;
 import android.util.AttributeSet;
