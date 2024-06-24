@@ -72,7 +72,7 @@ class ImageListener implements OnImageAvailableListener {
 
     @Override
     public void onImageAvailable(final ImageReader reader) {
-        final Image image = reader.acquireLatestImage();
+        final Image image = reader.acquireLatestImage();    //Chih-Yuan Yang: What is the format of this image object? YUV422?
 
         if (image == null)
             return; //such a case happens.
@@ -95,6 +95,7 @@ class ImageListener implements OnImageAvailableListener {
                 final int uvRowStride = planes[1].getRowStride();
                 final int uvPixelStride = planes[1].getPixelStride();
 
+                //2024/6/24 Chih-Yuan Yang: Exception occurs in this statement, why?
                 ImageUtils.convertYUV420ToARGB8888(
                         yuvBytes[0],
                         yuvBytes[1],

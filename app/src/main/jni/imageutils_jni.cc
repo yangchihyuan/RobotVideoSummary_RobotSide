@@ -27,8 +27,11 @@ limitations under the License.
 #include "yuv2rgb.h"
 #include "rgb2yuv.h"
 
-#define IMAGEUTILS_METHOD(METHOD_NAME) \
+//2024/6/24 Chih-Yuan Yang: Should I change the name here?
+//#define IMAGEUTILS_METHOD(METHOD_NAME) \
   Java_org_iox_zenbo_env_ImageUtils_##METHOD_NAME  // NOLINT
+#define IMAGEUTILS_METHOD(METHOD_NAME) \
+  Java_tw_edu_cgu_ai_zenbo_env_ImageUtils_##METHOD_NAME  // NOLINT
 
 //using namespace tensorflow;
 

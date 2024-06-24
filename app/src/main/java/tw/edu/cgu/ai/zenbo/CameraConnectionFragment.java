@@ -115,6 +115,9 @@ public class CameraConnectionFragment extends Fragment {
 
     private AutoFitTextureView mTextureView;
     private CameraCaptureSession mPreviewSession;
+    /*Chih-Yuan Yang 2024/6/16: ImageListener is defined in the ImageListener.java, which is derived
+     from ImageReader.OnImageAvailableListener, an interface.
+     */
     private final ImageListener mPreviewListener = new ImageListener();
     private final SimpleDateFormat mDateFormat = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss.SSS");
     private static final String[] VIDEO_PERMISSIONS = {
@@ -201,8 +204,9 @@ public class CameraConnectionFragment extends Fragment {
                     if( bRecordVideo == false )
                         startPreview();
                     else
+                        //Chih-Yuan Yang 2024/6/16: This is the reason I never record videos. I set the boolean variable fixed.
                         startRecordingVideo();      //The startRecordingVideo is called in a callback function. Is it fine?
-                    cameraOpenCloseLock.release();
+                    cameraOpenCloseLock.release();  //Chih-Yuan Yang 2024/6/16: The cameraOpenCloseLock is a semaphore.
                 }
 
                 @Override
@@ -325,7 +329,7 @@ public class CameraConnectionFragment extends Fragment {
                             }
                         }
                     }
-                    else
+                    else   //if socket != null
                     {
                         if (mPreviewListener.mbSendSuccessfully == false) {
                             try {
@@ -343,6 +347,8 @@ public class CameraConnectionFragment extends Fragment {
 
                                 String ServerURL = editText_Server.getText().toString();
                                 int PortNumber = Integer.parseInt(editText_Port.getText().toString());
+                                //Chih-Yuan Yang 2024/6/20: I repeatedly build and destroy the
+                                //socket because I cannot guarantee Zenbo can successfully access the WiFi.
                                 socket = new Socket(ServerURL, PortNumber);
                                 socket_result = new Socket(ServerURL, PortNumber + 1);
                                 if (socket_result.isConnected()) {
@@ -360,7 +366,7 @@ public class CameraConnectionFragment extends Fragment {
                         }
                     }
                 }
-                else
+                else  //checkBox_enable_connection.isChecked() is false
                 {
                     try {
                         if (socket != null) {
@@ -456,7 +462,7 @@ public class CameraConnectionFragment extends Fragment {
             if (!cameraOpenCloseLock.tryAcquire(30000, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
-            String cameraId = manager.getCameraIdList()[0];
+            String cameraId = manager.getCameraIdList()[0];    //Chih-Yuan Yang 2024/6/16: Use the first camera, and Zenbo has only 1 camera
             // Choose the sizes for camera preview and video recording
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
             StreamConfigurationMap map = characteristics
@@ -464,6 +470,7 @@ public class CameraConnectionFragment extends Fragment {
             if (map == null) {
                 throw new RuntimeException("Cannot get available preview/video sizes");
             }
+            //Chih-Yuan Yang 2024/6/16: The map object is not used anywhere else.
 
             mMediaRecorder = new MediaRecorder();
             // 4/25/2018 Chih-Yuan: The permission check is done in the TrackActivity.java
@@ -610,7 +617,9 @@ public class CameraConnectionFragment extends Fragment {
             mPreviewBuilder.addTarget(recorderSurface);
 
             // Set up Surface for the ImageReader
+            //Chih-Yuan Yang 2024/6/16: mPreview Reader is an ImageReader
             mPreviewReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
+            //Chih-Yuan Yang 2024/6/16: mPreviewListener is an ImageListener
             mPreviewReader.setOnImageAvailableListener(mPreviewListener, handlerImageListener);
             mPreviewBuilder.addTarget(mPreviewReader.getSurface());
             surfaces.add(mPreviewReader.getSurface());

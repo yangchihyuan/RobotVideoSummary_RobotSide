@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+/*Chih-Yuan Yang 2024: This class just lets TextureView automatically adjust its size.
+This class is used in CameraConnectioinFragment line 116
+* */
 package tw.edu.cgu.ai.zenbo;
 
 import android.content.Context;

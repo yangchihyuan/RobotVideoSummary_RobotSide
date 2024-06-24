@@ -13,12 +13,9 @@ public class AnalyzedFrame {
     int yolo_cnt_person;
     int yolo_cnt_tvmonitor;
     List<float[][]> openpose_coordinate;
-//    List<float[]> yolo_coordinate_person;
-//    List<float[]> yolo_coordinate_tvmonitor;
-    List<int[]> yolo_coordinate_person;
-    List<int[]> yolo_coordinate_tvmonitor;
+    List<int[]> yolo_coordinate_person;  //Chih-Yuan Yang 2024: I no longer use this because I disable Yolo.
+    List<int[]> yolo_coordinate_tvmonitor; //Chih-Yuan Yang 2024: I no longer use this because I disable Yolo.
     float[][] fMatrix;
-//    float[] yMatrix;
     boolean bFoundPerson = false;
     boolean bIgnorePerson = false;
     boolean bAvailable = false;
@@ -33,8 +30,6 @@ public class AnalyzedFrame {
     {
         fMatrix = new float[18][3];
         openpose_coordinate = new ArrayList<float[][]>();
-//        yolo_coordinate_person = new ArrayList<float[]>();
-//        yolo_coordinate_tvmonitor = new ArrayList<float[]>();
         yolo_coordinate_person = new ArrayList<int[]>();
         yolo_coordinate_tvmonitor = new ArrayList<int[]>();
     }
